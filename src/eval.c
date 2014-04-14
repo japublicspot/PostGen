@@ -1,7 +1,7 @@
 #include "eval.h"
 
 // The number of commands in the interpreter
-#define NUM_COMMANDS 6
+#define NUM_COMMANDS 7
 
 // Private function prototypes:
 // Used to parse each command
@@ -13,6 +13,7 @@ static void begin( int argc, char* args[] );
 static void end( int argc, char* args[] );
 static void loop( int argc, char* args[] );
 static void quit( int argc, char* args[] );
+static void help( int argc, char* args[] );
 
 // List of states for the interpreter
 static void (*states[NUM_COMMANDS])(int argc, char* argsp[]) =
@@ -22,7 +23,8 @@ static void (*states[NUM_COMMANDS])(int argc, char* argsp[]) =
             begin,
             end,
             loop,
-            quit
+            quit,
+            help
         };
 
 // List of supported commands. These have a 1-to-1 mapping to the states above.
@@ -33,7 +35,8 @@ static char* commands[NUM_COMMANDS] =
             "begin",
             "end",
             "loop",
-            "quit"
+            "quit",
+            "help"
         };
 
 // The PostScript file currently being operated on
@@ -333,5 +336,31 @@ void quit( int argc, char* args[] ) {
 
         // Exit the program successfully
         exit(EXIT_SUCCESS);
+    }
+}
+
+void help( int argc, char* args[] ) {
+    // Check if we have the correct number of arguments
+    if( argc != 1 ) {
+        printf( "\nERROR:\tInvalid number of arguments provided!\n" );
+        printf( "Usage:\thelp\n" );
+    } else {
+        printf( "\ninterPS Manual\n" );
+        printf( "--------------\n" );
+        printf( "This interpreter behaves like a state machine, with each \n"
+                "command mapped to its own state.  The commands given construct \n"
+                "a PostScript file that can be opened in any PostScript viewer. \n"
+                "Prior to executing any commands, a session must first be created \n"
+                "which sets up the PostScript file that is being constructed.\n" );
+        printf( "\nCommands:" );
+        printf( "\nbegin [name]    \tStarts a new session with the given name.\n" );
+        printf( "                  \tThis creates a PostScript file of the given name.\n" );
+        printf( "\nend             \tEnds the current session and closes its file.\n" );
+        printf( "\npath [x] [y]    \tConstructs a user-defined path, starting at (x,y).\n"
+                "                  \tContinues to read tuples in until the user enters 'done'.\n" );
+        printf( "\nrotate [degrees]\tRotates the given construct by the given number of degrees.\n" );
+        printf( "\nloop [count]    \tRepeats the given construct count times.\n" );
+        printf( "\nquit            \tCloses any open session and exits the interpreter.\n" );
+        printf( "\nhelp            \tDisplays this dialog.\n" );
     }
 }

@@ -4,12 +4,6 @@
  * Connor W.
  */
 
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
-#include <stdlib.h>
-#include <errno.h>
-
 #include "eval.h"
 
 // Version string
@@ -20,6 +14,7 @@ int main( int argc, char* arg[] ) {
     // Print program info
     printf( "interPS - PostScript Interpreter\n" );
     printf( "Version: %s\n", version );
+    printf( "Enter a command, or 'help' to view available commands.\n" );
 
     // Start the interpreter
     eval();
