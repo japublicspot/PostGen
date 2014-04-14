@@ -1,10 +1,14 @@
 #include "eval.h"
 
+// The number of commands in the interpreter
+#define NUM_COMMANDS 6
+
 // Private function prototypes:
 // Used to parse each command
 static void parseCommand( char* line, int* argc, char* args[] );
 // Functions for each command/state:
 static void path( int argc, char* args[] );
+static void rotate( int argc, char* args[] );
 static void begin( int argc, char* args[] );
 static void end( int argc, char* args[] );
 static void loop( int argc, char* args[] );
@@ -14,6 +18,7 @@ static void quit( int argc, char* args[] );
 static void (*states[NUM_COMMANDS])(int argc, char* argsp[]) =
         {
             path,
+            rotate,
             begin,
             end,
             loop,
@@ -24,6 +29,7 @@ static void (*states[NUM_COMMANDS])(int argc, char* argsp[]) =
 static char* commands[NUM_COMMANDS] =
         {
             "path",
+            "rotate",
             "begin",
             "end",
             "loop",
@@ -50,6 +56,7 @@ void eval() {
         int argc = 0;
         char* args[30];
 
+        // Print interpreter promt
         printf( "\n>> " );
 
         // Get command from user
@@ -123,7 +130,7 @@ void path( int argc, char* args[] ) {
             return;
         }
 
-        printf( "Enter a series of points (one tuple per line), and 'done when finished:\n" );
+        printf( "\nEnter a series of points (one tuple per line), and 'done' when finished:\n" );
 
         // Get the starting point of the path
         int startX = atoi( args[1] );
@@ -135,7 +142,8 @@ void path( int argc, char* args[] ) {
 
         // Continue reading points until the user is finished
         while(1) {
-            printf("\n: ");
+            // Print state prompt
+            printf(": ");
 
             char point[255];
             if( fgets( point, 255, stdin ) != NULL ) {
@@ -170,10 +178,10 @@ void path( int argc, char* args[] ) {
                             // Add the next point to the path
                             fprintf( session, "%d %d lineto\n", x, y );
                         } else {
-                            printf( "\nERROR:\tArguments must be numbers!\n" );
+                            printf( "ERROR:\tArguments must be numbers!\n" );
                         }
                     } else {
-                        printf( "\nERROR:\tInvalid number of arguments provided!\n" );
+                        printf( "ERROR:\tInvalid number of arguments provided!\n" );
                         printf( "Usage:\t<x> <y>\n");
                     }
                 }
@@ -181,6 +189,17 @@ void path( int argc, char* args[] ) {
         }
         printf( "Path finished.\n" );
     }
+}
+
+/*
+ * Command state to execute rotations
+ *
+ * Input:
+ * int deg - degrees to rotate by
+ */
+void rotate( int argc, char* args[] ) {
+    // TODO: Implement rotate state
+    printf( "TODO: Rotate not yet implemented!\n" );
 }
 
 /*

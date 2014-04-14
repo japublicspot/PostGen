@@ -7,9 +7,6 @@
 #ifndef EVAL_H
 #define EVAL_H
 
-// The number of commands in the interpreter
-#define NUM_COMMANDS 5
-
 // Reads and evaluates user input to the interpreter
 void eval();
 
