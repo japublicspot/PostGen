@@ -1,7 +1,7 @@
 /* PostScript Language Project
  * CS4121 - Programming Languages
  * Nathan Peterson
- * Connor W.
+ * Connor Wlodarczak
  */
 
 #include "eval.h"
