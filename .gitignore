@@ -1,0 +1,66 @@
+# Object files
+*.o
+*.ko
+*.slo
+*.lo
+
+# Static Libraries
+*.lai
+*.la
+*.lib
+*.a
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.apk
+*.ap_
+
+# Vim swap, undo, and backup files
+*~
+*.un~
+*.swp
+
+# Ignore log files
+*.log
+
+# CMake Files
+CMakeCache.txt
+CMakeFiles/
+SimpLogConfig.h
+cmake_install.cmake
+install_manifest.txt
+build/
+
+# Java
+*.class
+*.ear
+*.war
+*.dex
+
+# Eclipse
+.metadata/
+.classpath
+.project
+
+# IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Ignore the bin directory
+bin/*
+
+##### PROJECT SPECIFIC RULES #####
+
+# PostScript files
+*.ps
+
