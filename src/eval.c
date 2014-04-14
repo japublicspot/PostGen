@@ -289,7 +289,7 @@ void rotate( int argc, char* args[] ) {
         // Restore coordinate system state
         fprintf( session, "grestore\n" );
 
-        printf( "Repeat block finished. Result of block will be rotated %d degrees.\n", deg );
+        printf( "Rotate block finished. Result of block will be rotated %d degrees.\n", deg );
     }
 }
 
@@ -384,9 +384,6 @@ void end( int argc, char* args[] ) {
  * int r - Number of times to repeat loop.
  */
 void loop( int argc, char* args[] ) {
-    // TODO: Implement loop state
-    printf( "TODO: Loop not yet implemented!\n" );
-
     // Check if we have the correct number of arguments
     if( argc != 2 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
@@ -397,6 +394,34 @@ void loop( int argc, char* args[] ) {
             return;
         }
 
+        int count = strtol( args[1], NULL, 10 );
+        if( errno != 0 ) {
+            printf( "\nERROR:\tArguments must be numbers!\n" );
+            return;
+        }
+
+        // Apply the rotation
+        fprintf( session, "%d {\n", count );
+        while(1) {
+            printf( "\nEnter commands to construct a block of code to loop:\n" );
+            // Print repeat prompt
+            printf( "#> " );
+
+            // Evaluate input for body of the repeat block
+            eval( stdin, true );
+
+            // Ask the user if they wish to enter more commands
+            printf( "\nFinished constructing loop block? (y/n) " );
+            char ans[255];
+            // Check input and verify its validity
+            if( fgets(ans, 255, input) != NULL && ans[0] == 'y' && strlen(ans) == 2 ) {
+                break;
+            }
+        }
+        // Set to repeat
+        fprintf( session, "} repeat\n" );
+
+        printf( "Loop block finished. Result of block will be looped %d times.\n", count );
     }
 }
 
