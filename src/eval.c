@@ -2,8 +2,12 @@
 
 // The number of commands in the interpreter
 #define NUM_COMMANDS 7
+// Index that the PostScript commands begin at
+#define PS_CMD_START 4
 
 // Private function prototypes:
+// Evaluator for user input
+static void eval( FILE* inStream, bool psOnly );
 // Used to parse each command
 static int parseCommand( char* line, int* argc, char* args[] );
 // Functions for each command/state:
@@ -18,32 +22,35 @@ static void help( int argc, char* args[] );
 // List of states for the interpreter
 static void (*states[NUM_COMMANDS])(int argc, char* argsp[]) =
         {
-            path,
-            rotate,
+            help,
             begin,
             end,
-            loop,
             quit,
-            help
+            path,
+            rotate,
+            loop
         };
 
 // List of supported commands. These have a 1-to-1 mapping to the states above.
 static char* commands[NUM_COMMANDS] =
         {
-            "path",
-            "rotate",
+            "help",
             "begin",
             "end",
-            "loop",
             "quit",
-            "help"
+            "path",
+            "rotate",
+            "loop"
         };
 
 // The PostScript file currently being operated on
 static FILE* session = NULL;
 
+// The input stream the interpreter will retrieve commands from
+static FILE* input = NULL;
+
 /*
- * Reads and evaluates user input.
+ * Main run loop of the interpreter.
  * Continues indefinitely, until the user quits the interpreter.
  *
  * Input:
@@ -52,50 +59,76 @@ static FILE* session = NULL;
  * Returns:
  * None
  */
-void eval() {
+void run() {
     // Continue reading user input until the user quits
     while(1) {
-        // Used by parseCommand
-        int argc = 0;
-        char* args[30];
-
         // Print interpreter promt
         printf( "\n>> " );
 
-        // Get command from user
-        char line[255];
-        // Only proccess command if we successfully read something
-        if( fgets( line, 255, stdin ) != NULL ) {
-            // Parse the user command
-            int parseErr = parseCommand( line, &argc, args );
+        // Get and evaluate user input
+        eval( stdin, false );
+    }
+}
 
-            // If a command was provided, try to execute it
-            if( argc > 0 ) {
-                // Used to detect if the command was unknown
-                bool found = false;
-                // Check if the command given is a known command
-                // Only execute if parseCommand succeeded
-                for( int i = 0; i < NUM_COMMANDS && parseErr == 0; i++  ) {
-                    if( strcmp( commands[i], args[0] ) == 0 ) {
-                        // Execute the command with provided args
-                        (*states[i])(argc, args);
-                        found = true;
-                    }
-                }
+/*
+ * Reads and evaluates user input.
+ *
+ * Input:
+ * FILE* input - Set the input stream.
+ * bool psOnly - Set if only PS commands should be recognized, or all commands.
+ *
+ * Returns:
+ * None
+ */
+void eval( FILE* inStream, bool psOnly ) {
+    // Check that a valid input stream was provided
+    if( inStream == NULL ) {
+        printf( "\nERROR:\tInvalid input stream specified!\n" );
+        return;
+    } else {
+        // Set the input stream
+        input = inStream;
+    }
 
-                // Free the args list
-                for( int i = 0; i < argc; i++ ) {
-                    free(args[i]);
-                }
+    // Used by parseCommand
+    int argc = 0;
+    char* args[30];
 
-                // If an invalid command was provided, display error
-                if(!found) {
-                    printf( "ERROR: Unknown command!\n" );
+    // Get command from user
+    char line[255];
+    // Only proccess command if we successfully read something
+    if( fgets( line, 255, input ) != NULL ) {
+        // Parse the user command
+        int parseErr = parseCommand( line, &argc, args );
+
+        // If a command was provided, try to execute it
+        if( argc > 0 ) {
+            // Used to detect if the command was unknown
+            bool found = false;
+            // Check if the command given is a known command
+            // Only execute if parseCommand succeeded
+            int start = 0;
+            if(psOnly) { start = PS_CMD_START; }
+            for( int i = start; i < NUM_COMMANDS && parseErr == 0; i++  ) {
+                if( strcmp( commands[i], args[0] ) == 0 ) {
+                    // Execute the command with provided args
+                    (*states[i])(argc, args);
+                    found = true;
                 }
-            } else {
-                // We weren't given a command. This should never happen.
-                printf( "ERROR: No command provided!\n" );
             }
+
+            // Free the args list
+            for( int i = 0; i < argc; i++ ) {
+                free(args[i]);
+            }
+
+            // If an invalid command was provided, display error
+            if(!found) {
+                printf( "ERROR: Unknown command!\n" );
+            }
+        } else {
+            // We weren't given a command. This should never happen.
+            printf( "ERROR: No command provided!\n" );
         }
     }
 }
@@ -164,14 +197,15 @@ void path( int argc, char* args[] ) {
             printf(": ");
 
             char point[255];
-            if( fgets( point, 255, stdin ) != NULL ) {
+            if( fgets( point, 255, input ) != NULL ) {
                 // Get the first argument
                 char* first = strtok( point, " \n" );
 
                 // If the argument is 'done', exit this state
                 if( strcmp( first, "done" ) == 0 ) {
-                    // Close the path in the file
-                    fprintf( session, "closepath\nstroke\n" );
+                    // Close the path and apply the stroke
+                    fprintf( session, "closepath\n" );
+                    fprintf( session, "stroke\n" );
                     break;
                 } else {
                     // Retreive the arguments
@@ -216,8 +250,47 @@ void path( int argc, char* args[] ) {
  * int deg - degrees to rotate by
  */
 void rotate( int argc, char* args[] ) {
-    // TODO: Implement rotate state
-    printf( "TODO: Rotate not yet implemented!\n" );
+    // Check if we have the correct number of arguments
+    if( argc != 2 ) {
+        printf( "\nERROR:\tInvalid number of arguments provided!\n" );
+        printf( "Usage:\trotate <degrees>\n" );
+    } else {
+        if( session == NULL ) {
+            printf( "\nERROR:\tNo active session!\n" );
+            return;
+        }
+
+        int deg = strtol( args[1], NULL, 10 );
+        if( errno != 0 ) {
+            printf( "\nERROR:\tArguments must be numbers!\n" );
+            return;
+        }
+
+        // Save coordinate system state
+        fprintf( session, "gsave\n" );
+        // Apply the rotation
+        fprintf( session, "%d rotate\n", deg );
+        while(1) {
+            printf( "\nEnter commands to construct a block of code to rotate:\n" );
+            // Print repeat prompt
+            printf( "+> " );
+
+            // Evaluate input for body of the repeat block
+            eval( stdin, true );
+
+            // Ask the user if they wish to enter more commands
+            printf( "\nFinished constructing rotate block? (y/n) " );
+            char ans[255];
+            // Check input and verify its validity
+            if( fgets(ans, 255, input) != NULL && ans[0] == 'y' && strlen(ans) == 2 ) {
+                break;
+            }
+        }
+        // Restore coordinate system state
+        fprintf( session, "grestore\n" );
+
+        printf( "Repeat block finished. Result of block will be rotated %d degrees.\n", deg );
+    }
 }
 
 /*
@@ -237,13 +310,13 @@ void begin( int argc, char* args[] ) {
             printf( "Active session exists! Do wish to close this session and start a new one? (y/n) " );
             char ans[255];
             // Check input and verify its validity
-            if( fgets(ans, 255, stdin) != NULL && ( ans[0] == 'n' || strlen(ans) != 2 ) ) {
+            if( fgets(ans, 255, input) != NULL && ans[0] == 'y' && strlen(ans) == 2 ) {
+                // Close the current session
+                end( 1, NULL );
+            } else {
                 // Abort session creation
                 printf( "Aborting session creation...\n" );
                 return;
-            } else {
-                // Close the current session
-                end( 1, NULL );
             }
         }
         // Get the name of the session to create
@@ -288,6 +361,9 @@ void end( int argc, char* args[] ) {
     } else {
         // Check if session is null
         if( session != NULL ) {
+            // Dump the generated page
+            fprintf( session, "showpage\n" );
+
             // Close session and check for errors
             if( fclose( session ) != 0 ) {
                 printf( "\nERROR: Failed to close session file!\n" );
@@ -310,6 +386,18 @@ void end( int argc, char* args[] ) {
 void loop( int argc, char* args[] ) {
     // TODO: Implement loop state
     printf( "TODO: Loop not yet implemented!\n" );
+
+    // Check if we have the correct number of arguments
+    if( argc != 2 ) {
+        printf( "\nERROR:\tInvalid number of arguments provided!\n" );
+        printf( "Usage:\tloop <count>\n" );
+    } else {
+        if( session == NULL ) {
+            printf( "\nERROR:\tNo active session!\n" );
+            return;
+        }
+
+    }
 }
 
 /*
@@ -339,6 +427,12 @@ void quit( int argc, char* args[] ) {
     }
 }
 
+/*
+ * Displays the help dialog.
+ *
+ * Input:
+ * None
+ */
 void help( int argc, char* args[] ) {
     // Check if we have the correct number of arguments
     if( argc != 1 ) {

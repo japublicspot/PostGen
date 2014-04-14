@@ -17,5 +17,5 @@ int main( int argc, char* arg[] ) {
     printf( "Enter a command, or 'help' to view available commands.\n" );
 
     // Start the interpreter
-    eval();
+    run();
 }
