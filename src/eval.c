@@ -5,7 +5,7 @@
 
 // Private function prototypes:
 // Used to parse each command
-static void parseCommand( char* line, int* argc, char* args[] );
+static int parseCommand( char* line, int* argc, char* args[] );
 // Functions for each command/state:
 static void path( int argc, char* args[] );
 static void rotate( int argc, char* args[] );
@@ -64,18 +64,25 @@ void eval() {
         // Only proccess command if we successfully read something
         if( fgets( line, 255, stdin ) != NULL ) {
             // Parse the user command
-            parseCommand( line, &argc, args );
+            int parseErr = parseCommand( line, &argc, args );
 
             // If a command was provided, try to execute it
             if( argc > 0 ) {
-                // Check if the command given is a known command
+                // Used to detect if the command was unknown
                 bool found = false;
-                for( int i = 0; i < NUM_COMMANDS; i++  ) {
+                // Check if the command given is a known command
+                // Only execute if parseCommand succeeded
+                for( int i = 0; i < NUM_COMMANDS && parseErr == 0; i++  ) {
                     if( strcmp( commands[i], args[0] ) == 0 ) {
                         // Execute the command with provided args
                         (*states[i])(argc, args);
                         found = true;
                     }
+                }
+
+                // Free the args list
+                for( int i = 0; i < argc; i++ ) {
+                    free(args[i]);
                 }
 
                 // If an invalid command was provided, display error
@@ -92,25 +99,33 @@ void eval() {
 
 /*
  * Parses the command provided by the user to the interpreter.
+ * NOTE: This function mallocs each element of the args list individually.
+ *       It is the responsibility of the caller to free each element manually.
  *
  * Input:
  * char* line   - The line of input to be parsed.
  * int* argc    - Used to return the count of args found.
  * char* args[] - Used to return the args found.
  */
-void parseCommand( char* line, int* argc, char* args[] ) {
+int parseCommand( char* line, int* argc, char* args[] ) {
     // Get the first argument
     char* current = strtok( line, " \n" );
     // Continue until there are no arguments left to read
     while( current != NULL ) {
         // Set the current argument in the args list
-        args[*argc] = (char*)malloc(strlen(current));
+        args[*argc] = (char*)malloc(strlen(current) + 1);
+        if( args[*argc] == NULL ) {
+            printf( "\nERROR:\tUnable to allocate args list!\n" );
+            return -1;
+        }
         strcpy( args[*argc], current );
         // Increment args count
         (*argc)++;
         // Get the next argument
         current = strtok( NULL, " \n" );
     }
+
+    return 0;
 }
 
 /*
@@ -310,6 +325,9 @@ void quit( int argc, char* args[] ) {
         if( session != NULL ) {
             end( 1, NULL );
         }
+
+        // Free the args value for this call
+        free(args[0]);
 
         printf( "Closing interpreter...\n" );
 
