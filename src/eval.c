@@ -1,7 +1,7 @@
 #include "eval.h"
 
 // The number of commands in the interpreter
-#define NUM_COMMANDS 9
+#define NUM_COMMANDS 12
 // Index that the PostScript commands begin at
 #define PS_CMD_START 4
 
@@ -14,6 +14,9 @@ static int parseCommand( char* line, int* argc, char* args[] );
 static void path( int argc, char* args[] );
 static void closedPath( int argc, char* args[] );
 static void solidPath( int argc, char* args[] );
+static void curve( int argc, char* args[] );
+static void closedCurve( int argc, char* args[] );
+static void solidCurve( int argc, char* args[] );
 static void rotate( int argc, char* args[] );
 static void begin( int argc, char* args[] );
 static void end( int argc, char* args[] );
@@ -31,6 +34,9 @@ static void (*states[NUM_COMMANDS])(int argc, char* argsp[]) =
             path,
             closedPath,
             solidPath,
+            curve,
+            closedCurve,
+            solidCurve,
             rotate,
             loop
         };
@@ -45,6 +51,9 @@ static char* commands[NUM_COMMANDS] =
             "path",
             "closedpath",
             "solidpath",
+            "curve",
+            "closedcurve",
+            "solidcurve",
             "rotate",
             "loop"
         };
@@ -188,11 +197,14 @@ int parseCommand( char* line, int* argc, char* args[] ) {
  * Command state for drawing a user-defined path.
  *
  * Input:
- * int x, y - Starting point for the path.
+ * int x, y   - Starting point for the path.
+ * int closed - (optional) Whether the generated path will be closed or open.
+ * int solid  - (optional) Whether the generated path should be filled or not.
+ * int curve  - (optional) Whether the generated path is based on curves or lines.
  */
 void path( int argc, char* args[] ) {
     // Check if we have the correct number of arguments
-    if( argc < 3 || argc > 5 ) {
+    if( argc < 3 || argc > 6 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
         printf( "Usage:\tpath <start_x> <start_y>\n" );
     } else {
@@ -209,19 +221,27 @@ void path( int argc, char* args[] ) {
 
         // Get path options if provided
         int closed = 0;
-        int solid = 0;
+        int solid  = 0;
+        int curve  = 0;
         if( argc >= 4 ) {
             // If this path should be closed or open
             closed = atoi(args[3]);
-            if( argc == 5 ) {
+            if( argc >= 5 ) {
                 // If this path should be filled or stroked
                 solid = atoi(args[4]);
+                if( argc == 6 ) {
+                    // If this path should use curves or lines
+                    curve = atoi(args[5]);
+                }
             }
         }
 
         // Begin the path in the file
         fprintf( session, "newpath\n" );
         fprintf( session, "%d %d moveto\n", startX, startY );
+
+        // Current cound of points entered
+        int points = 0;
 
         // Continue reading points until the user is finished
         while(1) {
@@ -235,15 +255,29 @@ void path( int argc, char* args[] ) {
 
                 // If the argument is 'done', exit this state
                 if( strcmp( first, "done" ) == 0 ) {
-                    // Close the path
+                    // Apply points as curves if option is set
+                    if(curve) {
+                        // Three points are required for a valid curve
+                        if( points < 3 ) {
+                            printf( "ERROR:\t Need at least %d more points to create a valid curve!\n", (3 - points) );
+                            continue;
+                        }
+                        fprintf( session, "curveto\n" );
+                    }
+
+                    // Close the path if option is set
                     if(closed) {
                         fprintf( session, "closepath\n" );
                     }
+
+                    // Apply the appropriate path finalizer
                     if(solid) {
                         fprintf( session, "fill\n" );
                     } else {
                         fprintf( session, "stroke\n" );
                     }
+
+                    // End path construction
                     break;
                 } else {
                     // Retreive the arguments
@@ -266,7 +300,15 @@ void path( int argc, char* args[] ) {
                         // to 0.
                         if( !errno ) {
                             // Add the next point to the path
-                            fprintf( session, "%d %d lineto\n", x, y );
+                            fprintf( session, "%d %d", x, y );
+                            // Define points as lines if curve not set
+                            if(!curve) {
+                                fprintf( session, " lineto" );
+                            }
+                            fprintf( session, "\n" );
+
+                            // Increment the number of points
+                            points++;
                         } else {
                             printf( "ERROR:\tArguments must be numbers!\n" );
                         }
@@ -347,6 +389,123 @@ void solidPath( int argc, char* args[] ) {
         // Free the extra args we added
         free(args[3]);
         free(args[4]);
+    }
+}
+
+/*
+ * Command state for drawing a user-defined bezier curve.
+ *
+ * Input:
+ * int x, y - Starting point for the path.
+ */
+void curve( int argc, char* args[] ) {
+    // Check if we have the correct number of arguments
+    if( argc != 3 ) {
+        printf( "\nERROR:\tInvalid number of arguments provided!\n" );
+        printf( "Usage:\tcurve <start_x> <start_y>\n" );
+    } else {
+        // Alloc space
+        args[3] = (char*)malloc(sizeof(int));
+        args[4] = (char*)malloc(sizeof(int));
+        args[5] = (char*)malloc(sizeof(int));
+
+        // Make sure the alloc succeeded
+        if( args[3] != NULL && args[4] != NULL && args[5] != NULL ) {
+            // Set the args for a solid path
+            args[3][0] = '0';
+            args[4][0] = '0';
+            args[5][0] = '1';
+            argc += 3;
+
+            // Call path with new args added
+            path(argc, args);
+        } else {
+            printf( "\nERROR:\tFailed to allocate args list!\n" );
+            return;
+        }
+
+        // Free the extra args we added
+        free(args[3]);
+        free(args[4]);
+        free(args[5]);
+    }
+}
+
+/*
+ * Command state for drawing a user-defined, closed bezier curve.
+ *
+ * Input:
+ * int x, y - Starting point for the path.
+ */
+void closedCurve( int argc, char* args[] ) {
+    // Check if we have the correct number of arguments
+    if( argc != 3 ) {
+        printf( "\nERROR:\tInvalid number of arguments provided!\n" );
+        printf( "Usage:\tclosedcurve <start_x> <start_y>\n" );
+    } else {
+        // Alloc space
+        args[3] = (char*)malloc(sizeof(int));
+        args[4] = (char*)malloc(sizeof(int));
+        args[5] = (char*)malloc(sizeof(int));
+
+        // Make sure the alloc succeeded
+        if( args[3] != NULL && args[4] != NULL && args[5] != NULL ) {
+            // Set the args for a solid path
+            args[3][0] = '1';
+            args[4][0] = '0';
+            args[5][0] = '1';
+            argc += 3;
+
+            // Call path with new args added
+            path(argc, args);
+        } else {
+            printf( "\nERROR:\tFailed to allocate args list!\n" );
+            return;
+        }
+
+        // Free the extra args we added
+        free(args[3]);
+        free(args[4]);
+        free(args[5]);
+    }
+}
+
+/*
+ * Command state for drawing a user-defined, filled bezier curve.
+ *
+ * Input:
+ * int x, y - Starting point for the path.
+ */
+void solidCurve( int argc, char* args[] ) {
+    // Check if we have the correct number of arguments
+    if( argc != 3 ) {
+        printf( "\nERROR:\tInvalid number of arguments provided!\n" );
+        printf( "Usage:\tcurve <start_x> <start_y>\n" );
+    } else {
+        // Alloc space
+        args[3] = (char*)malloc(sizeof(int));
+        args[4] = (char*)malloc(sizeof(int));
+        args[5] = (char*)malloc(sizeof(int));
+
+        // Make sure the alloc succeeded
+        if( args[3] != NULL && args[4] != NULL && args[5] != NULL ) {
+            // Set the args for a solid path
+            args[3][0] = '1';
+            args[4][0] = '1';
+            args[5][0] = '1';
+            argc += 3;
+
+            // Call path with new args added
+            path(argc, args);
+        } else {
+            printf( "\nERROR:\tFailed to allocate args list!\n" );
+            return;
+        }
+
+        // Free the extra args we added
+        free(args[3]);
+        free(args[4]);
+        free(args[5]);
     }
 }
 
@@ -583,6 +742,12 @@ void help( int argc, char* args[] ) {
         printf( "\nclosedpath [x] [y] \tConstructs a user-defined, closed path, starting at (x,y).\n"
                 "                     \t Continues to read tuples in until the user enters 'done'.\n" );
         printf( "\nsolidpath [x] [y]  \tConstructs a user-defined, filled path, starting at (x,y).\n"
+                "                     \t Continues to read tuples in until the user enters 'done'.\n" );
+        printf( "\ncurve [x] [y]      \tConstructs a user-defined, bezier curve, starting at (x,y).\n"
+                "                     \tContinues to read tuples in until the user enters 'done'.\n" );
+        printf( "\nclosedcurve [x] [y]\tConstructs a user-defined, closed bezier curve, starting at (x,y).\n"
+                "                     \t Continues to read tuples in until the user enters 'done'.\n" );
+        printf( "\nsolidcurve [x] [y] \tConstructs a user-defined, filled bezier curve, starting at (x,y).\n"
                 "                     \t Continues to read tuples in until the user enters 'done'.\n" );
         printf( "\nrotate [degrees]   \tRotates the given construct by the given number of degrees.\n" );
         printf( "\nloop [count]       \tRepeats the given construct count times.\n" );
