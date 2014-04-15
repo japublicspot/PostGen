@@ -916,6 +916,8 @@ void open( int argc, char* argv[] ) {
             printf( "\nERROR:\tFailed to open script file!\n" );
             return;
         } else {
+            printf( "\nExecuting user-defined script file: %s\n", filename );
+            
             // Evaluate the script
             while( !feof(script) ) {
                 eval(script, false);
