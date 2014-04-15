@@ -1,0 +1,14 @@
+begin test
+path 100 100
+400 100
+400 400
+100 400
+done
+solidpolygon 200 200 50 8
+curve 500 500
+350 300
+200 100
+50 90
+done
+end
+quit

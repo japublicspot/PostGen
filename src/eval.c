@@ -157,7 +157,7 @@ void eval( FILE* inStream, bool psOnly ) {
             for( int i = start; i < NUM_COMMANDS && parseErr == 0; i++  ) {
                 if( strcmp( commands[i], argv[0] ) == 0 ) {
                     // If we are executing a PS command, add this to file
-                    if( i >= PS_CMD_START ) {
+                    if( i >= PS_CMD_START && !psOnly ) {
                         // Save coordinate system state
                         fprintf( session, "gsave\n" );
                     }
@@ -166,7 +166,7 @@ void eval( FILE* inStream, bool psOnly ) {
                     (*states[i])(argc, argv);
 
                     // If we are executing a PS command, add this to file
-                    if( i >= PS_CMD_START ) {
+                    if( i >= PS_CMD_START && !psOnly ) {
                         // Restore state
                         fprintf( session, "grestore\n" );
                     }
@@ -736,7 +736,7 @@ void rotate( int argc, char* argv[] ) {
             printf( "+> " );
 
             // Evaluate input for body of the repeat block
-            eval( stdin, true );
+            eval( input, true );
 
             // Ask the user if they wish to enter more commands
             printf( "\nFinished constructing rotate block? (y/n) " );
@@ -866,7 +866,7 @@ void loop( int argc, char* argv[] ) {
             printf( "#> " );
 
             // Evaluate input for body of the repeat block
-            eval( stdin, true );
+            eval( input, true );
 
             // Ask the user if they wish to enter more commands
             printf( "\nFinished constructing loop block? (y/n) " );

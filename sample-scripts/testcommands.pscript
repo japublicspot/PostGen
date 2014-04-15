@@ -1,0 +1,34 @@
+begin testcommands
+path 50 50
+75 50
+75 75
+done
+closedpath 50 100
+90 100
+90 90
+done
+solid path 50 150
+120  150
+120 120
+done
+curve 100 100
+150 175
+100 200
+120 180
+done
+closedcurve 200 200
+250 275
+200 300
+220 280
+done
+solidcurve 300 300
+350 375
+300 400
+320 380
+done
+circle 400 400 50
+solidcircle 400 500 55
+polygon 500 500 40 7
+solidpolygon 500 700 30 9
+end
+quit

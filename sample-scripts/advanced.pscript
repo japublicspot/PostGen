@@ -1,0 +1,16 @@
+begin advanced
+loop 5
+rotate 5
+polygon 200 200 50 6
+n
+curve 300 300
+450 500
+200 300
+100 230
+done
+y
+n
+solidcircle 450 450 25
+y
+end
+quit
