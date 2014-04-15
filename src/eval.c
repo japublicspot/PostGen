@@ -1,7 +1,7 @@
 #include "eval.h"
 
 // The number of commands in the interpreter
-#define NUM_COMMANDS 12
+#define NUM_COMMANDS 14
 // Index that the PostScript commands begin at
 #define PS_CMD_START 4
 
@@ -17,6 +17,8 @@ static void solidPath( int argc, char* args[] );
 static void curve( int argc, char* args[] );
 static void closedCurve( int argc, char* args[] );
 static void solidCurve( int argc, char* args[] );
+static void circle( int argc, char* args[] );
+static void solidCircle( int argc, char* args[] );
 static void rotate( int argc, char* args[] );
 static void begin( int argc, char* args[] );
 static void end( int argc, char* args[] );
@@ -37,6 +39,8 @@ static void (*states[NUM_COMMANDS])(int argc, char* argsp[]) =
             curve,
             closedCurve,
             solidCurve,
+            circle,
+            solidCircle,
             rotate,
             loop
         };
@@ -54,6 +58,8 @@ static char* commands[NUM_COMMANDS] =
             "curve",
             "closedcurve",
             "solidcurve",
+            "circle",
+            "solidcircle",
             "rotate",
             "loop"
         };
@@ -153,11 +159,11 @@ void eval( FILE* inStream, bool psOnly ) {
 
             // If an invalid command was provided, display error
             if(!found) {
-                printf( "ERROR: Unknown command!\n" );
+                printf( "\nERROR: Unknown command!\n" );
             }
         } else {
             // We weren't given a command. This should never happen.
-            printf( "ERROR: No command provided!\n" );
+            printf( "\nERROR: No command provided!\n" );
         }
     }
 }
@@ -510,6 +516,64 @@ void solidCurve( int argc, char* args[] ) {
 }
 
 /*
+ * Command state for drawing a circle at center (x,y) and a given radius.
+ *
+ * Input:
+ * int x, y - The center coordinates of the circle.
+ * int r    - The radius of the circle.
+ */
+void circle( int argc, char* args[] ) {
+    // Check if we have the correct number of arguments
+    if( argc != 4 ) {
+        printf( "\nERROR:\tInvalid number of arguments provided!\n" );
+        printf( "Usage:\tcircle <center_x> <center_y> <radius>\n" );
+    } else {
+        if( session == NULL ) {
+            printf( "\nERROR:\tNo active session!\n" );
+            return;
+        }
+
+        // Get the argument values
+        int x = atoi(args[1]);
+        int y = atoi(args[2]);
+        int r = atoi(args[3]);
+
+        // Create the circle
+        fprintf( session, "%d %d %d 0 360 arc\n", x, y, r );
+        fprintf( session, "stroke\n");
+    }
+}
+
+/*
+ * Command state for drawing a filled circle at center (x,y) and a given radius.
+ *
+ * Input:
+ * int x, y - The center coordinates of the circle.
+ * int r    - The radius of the circle.
+ */
+void solidCircle( int argc, char* args[] ) {
+    // Check if we have the correct number of arguments
+    if( argc != 4 ) {
+        printf( "\nERROR:\tInvalid number of arguments provided!\n" );
+        printf( "Usage:\tcircle <center_x> <center_y> <radius>\n" );
+    } else {
+        if( session == NULL ) {
+            printf( "\nERROR:\tNo active session!\n" );
+            return;
+        }
+
+        // Get the argument values
+        int x = atoi(args[1]);
+        int y = atoi(args[2]);
+        int r = atoi(args[3]);
+
+        // Create the circle
+        fprintf( session, "%d %d %d 0 360 arc\n", x, y, r );
+        fprintf( session, "fill\n");
+    }
+}
+
+/*
  * Command state to execute rotations
  *
  * Input:
@@ -734,24 +798,26 @@ void help( int argc, char* args[] ) {
                 "Prior to executing any commands, a session must first be created \n"
                 "which sets up the PostScript file that is being constructed.\n" );
         printf( "\nCommands:" );
-        printf( "\nbegin [name]       \tStarts a new session with the given name.\n" );
-        printf( "                     \tThis creates a PostScript file of the given name.\n" );
-        printf( "\nend                \tEnds the current session and closes its file.\n" );
-        printf( "\npath [x] [y]       \tConstructs a user-defined, open path, starting at (x,y).\n"
-                "                     \tContinues to read tuples in until the user enters 'done'.\n" );
-        printf( "\nclosedpath [x] [y] \tConstructs a user-defined, closed path, starting at (x,y).\n"
-                "                     \t Continues to read tuples in until the user enters 'done'.\n" );
-        printf( "\nsolidpath [x] [y]  \tConstructs a user-defined, filled path, starting at (x,y).\n"
-                "                     \t Continues to read tuples in until the user enters 'done'.\n" );
-        printf( "\ncurve [x] [y]      \tConstructs a user-defined, bezier curve, starting at (x,y).\n"
-                "                     \tContinues to read tuples in until the user enters 'done'.\n" );
-        printf( "\nclosedcurve [x] [y]\tConstructs a user-defined, closed bezier curve, starting at (x,y).\n"
-                "                     \t Continues to read tuples in until the user enters 'done'.\n" );
-        printf( "\nsolidcurve [x] [y] \tConstructs a user-defined, filled bezier curve, starting at (x,y).\n"
-                "                     \t Continues to read tuples in until the user enters 'done'.\n" );
-        printf( "\nrotate [degrees]   \tRotates the given construct by the given number of degrees.\n" );
-        printf( "\nloop [count]       \tRepeats the given construct count times.\n" );
-        printf( "\nquit               \tCloses any open session and exits the interpreter.\n" );
-        printf( "\nhelp               \tDisplays this dialog.\n" );
+        printf( "\nbegin [name]                \tStarts a new session with the given name.\n" );
+        printf( "                              \tThis creates a PostScript file of the given name.\n" );
+        printf( "\nend                         \tEnds the current session and closes its file.\n" );
+        printf( "\npath [x] [y]                \tConstructs a user-defined, open path, starting at (x,y).\n"
+                "                              \tContinues to read tuples in until the user enters 'done'.\n" );
+        printf( "\nclosedpath [x] [y]          \tConstructs a user-defined, closed path, starting at (x,y).\n"
+                "                              \t Continues to read tuples in until the user enters 'done'.\n" );
+        printf( "\nsolidpath [x] [y]           \tConstructs a user-defined, filled path, starting at (x,y).\n"
+                "                              \t Continues to read tuples in until the user enters 'done'.\n" );
+        printf( "\ncurve [x] [y]               \tConstructs a user-defined, bezier curve, starting at (x,y).\n"
+                "                              \tContinues to read tuples in until the user enters 'done'.\n" );
+        printf( "\nclosedcurve [x] [y]         \tConstructs a user-defined, closed bezier curve, starting at (x,y).\n"
+                "                              \t Continues to read tuples in until the user enters 'done'.\n" );
+        printf( "\nsolidcurve [x] [y]          \tConstructs a user-defined, filled bezier curve, starting at (x,y).\n"
+                "                              \t Continues to read tuples in until the user enters 'done'.\n" );
+        printf( "\ncircle [x] [y] [radius]     \tConstructs a circle with center at (x,y) and the given radius.\n" );
+        printf( "\nsolidcircle [x] [y] [radius]\tConstructs a filled circle with center at (x,y), and the given radius.\n" );
+        printf( "\nrotate [degrees]            \tRotates the given construct by the given number of degrees.\n" );
+        printf( "\nloop [count]                \tRepeats the given construct count times.\n" );
+        printf( "\nquit                        \tCloses any open session and exits the interpreter.\n" );
+        printf( "\nhelp                        \tDisplays this dialog.\n" );
     }
 }
