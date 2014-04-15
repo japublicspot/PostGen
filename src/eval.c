@@ -110,8 +110,14 @@ void run( char* filename ) {
             eval( stdin, false );
         }
     } else {
+        // Set up args
         char* argv[2] = { "open", filename };
+        // Execute script file
         open( 2, argv );
+
+        // Quit the interpreter
+        char* argv2[2] = { "quit", "1" };
+        quit( 2, argv2 );
     }
 }
 
@@ -916,8 +922,8 @@ void open( int argc, char* argv[] ) {
             printf( "\nERROR:\tFailed to open script file!\n" );
             return;
         } else {
-            printf( "\nExecuting user-defined script file: %s\n", filename );
-            
+            printf( "\nExecuting user-defined script file: %s\n\n", argv[1] );
+
             // Evaluate the script
             while( !feof(script) ) {
                 eval(script, false);
@@ -937,7 +943,7 @@ void open( int argc, char* argv[] ) {
  */
 void quit( int argc, char* argv[] ) {
     // Check if we have the correct number of arguments
-    if( argc != 1 ) {
+    if( argc < 1 || argc > 2 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
         printf( "Usage:\tquit\n" );
     } else {
@@ -946,13 +952,23 @@ void quit( int argc, char* argv[] ) {
             end( 1, NULL );
         }
 
+        // Get the script setting arg
+        int script = 0;
+        if( argc == 2 ) {
+            script = atoi(argv[1]);
+        }
+
         // Free the args value for this call
-        free(argv[0]);
+        if(!script) {
+            free(argv[0]);
+        }
 
         printf( "Closing interpreter...\n" );
 
         // Close the input stream
-        fclose(input);
+        if(!script) {
+            fclose(input);
+        }
 
         // Exit the program successfully
         exit(EXIT_SUCCESS);
