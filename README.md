@@ -26,6 +26,8 @@ When executing the intperpreter a filename may also optionally be provided:
 When a filename is provided, the interpreter will open and evaluate the contents of that file.
 The file must be of type `.pscript`, and must be implemented using only commands supported by the interpreter as defined below.
 
+There are a couple of script examples in the folder `sample-scripts`.
+
 If no file is specified, then the interpreter executes normally and enters an eval loop.
 You must start by issueing `begin` with a session name.
 This will create the PostScript file of that name to be constructed by the subsequent commands.
