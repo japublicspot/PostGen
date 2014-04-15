@@ -355,7 +355,8 @@ void closedPath( int argc, char* args[] ) {
         printf( "Usage:\tclosedpath <start_x> <start_y>\n" );
     } else {
         // Alloc space
-        args[3] = (char*)malloc(sizeof(int));
+        args[3] = (char*)malloc(sizeof(char) + 1);
+        memset( args[3], 0, sizeof(char) + 1);
 
         // Make sure the alloc succeeded
         if( args[3] != NULL ) {
@@ -388,8 +389,10 @@ void solidPath( int argc, char* args[] ) {
         printf( "Usage:\tsolidpath <start_x> <start_y>\n" );
     } else {
         // Alloc space
-        args[3] = (char*)malloc(sizeof(int));
-        args[4] = (char*)malloc(sizeof(int));
+        args[3] = (char*)malloc(sizeof(char) + 1);
+        args[4] = (char*)malloc(sizeof(char) + 1);
+        memset( args[3], 0, sizeof(char) + 1);
+        memset( args[4], 0, sizeof(char) + 1);
 
         // Make sure the alloc succeeded
         if( args[3] != NULL && args[4] != NULL ) {
@@ -424,9 +427,13 @@ void curve( int argc, char* args[] ) {
         printf( "Usage:\tcurve <start_x> <start_y>\n" );
     } else {
         // Alloc space
-        args[3] = (char*)malloc(sizeof(int));
-        args[4] = (char*)malloc(sizeof(int));
-        args[5] = (char*)malloc(sizeof(int));
+        args[3] = (char*)malloc(sizeof(char) + 1);
+        args[4] = (char*)malloc(sizeof(char) + 1);
+        args[5] = (char*)malloc(sizeof(char) + 1);
+        memset( args[3], 0, sizeof(char) + 1);
+        memset( args[4], 0, sizeof(char) + 1);
+        memset( args[5], 0, sizeof(char) + 1);
+
 
         // Make sure the alloc succeeded
         if( args[3] != NULL && args[4] != NULL && args[5] != NULL ) {
@@ -463,9 +470,12 @@ void closedCurve( int argc, char* args[] ) {
         printf( "Usage:\tclosedcurve <start_x> <start_y>\n" );
     } else {
         // Alloc space
-        args[3] = (char*)malloc(sizeof(int));
-        args[4] = (char*)malloc(sizeof(int));
-        args[5] = (char*)malloc(sizeof(int));
+        args[3] = (char*)malloc(sizeof(char) + 1);
+        args[4] = (char*)malloc(sizeof(char) + 1);
+        args[5] = (char*)malloc(sizeof(char) + 1);
+        memset( args[3], 0, sizeof(char) + 1);
+        memset( args[4], 0, sizeof(char) + 1);
+        memset( args[5], 0, sizeof(char) + 1);
 
         // Make sure the alloc succeeded
         if( args[3] != NULL && args[4] != NULL && args[5] != NULL ) {
@@ -502,9 +512,12 @@ void solidCurve( int argc, char* args[] ) {
         printf( "Usage:\tcurve <start_x> <start_y>\n" );
     } else {
         // Alloc space
-        args[3] = (char*)malloc(sizeof(int));
-        args[4] = (char*)malloc(sizeof(int));
-        args[5] = (char*)malloc(sizeof(int));
+        args[3] = (char*)malloc(sizeof(char) + 1);
+        args[4] = (char*)malloc(sizeof(char) + 1);
+        args[5] = (char*)malloc(sizeof(char) + 1);
+        memset( args[3], 0, sizeof(char) + 1);
+        memset( args[4], 0, sizeof(char) + 1);
+        memset( args[5], 0, sizeof(char) + 1);
 
         // Make sure the alloc succeeded
         if( args[3] != NULL && args[4] != NULL && args[5] != NULL ) {
@@ -661,7 +674,8 @@ void solidPolygon( int argc, char* args[] ) {
         printf( "Usage:\tsolidpolygon <center_x> <center_y> <radius> <sides>\n" );
     } else {
         // Alloc space
-        args[5] = (char*)malloc(sizeof(int));
+        args[5] = (char*)malloc(sizeof(char) + 1);
+        memset( args[5], 0, sizeof(char) + 1 );
 
         // Make sure the alloc succeeded
         if( args[5] != NULL ) {
