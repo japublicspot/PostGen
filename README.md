@@ -10,6 +10,24 @@ Connor Wlodarczak
 This is a basic interpreter that acts as a state machine to generate
 a PostScript file from a series of user-inputted commands.
 
+##Usage
+Run the interpreter by executing `./interPS`
+
+When executing the intperpreter a filename may also optionally be provided: `./interPS script.pscript`
+
+When a filename is provided, the interpreter will open and evaluate the contents of that file.
+The file must be of type `.pscript`, and must be implemented using only commands supported by the interpreter as defined below.
+
+If no file is specified, then the interpreter executes normally and enters an eval loop.
+You must start by issueing `begin` with a session name.
+This will create the PostScript file of that name to be constructed by the subsequent commands.
+
+Proceed by entering any of the commands that are supported by the interpreter, as defined below.
+
+When finished with a session, simply call `end`.  Likewise, when you wish to exit the interpreter completely, call `quit`.
+
+Once you are done generating a PostScript file, you may then open it with any PostScript viewer.
+
 ##Commands
 ###begin [name]
 Starts a new session with the given name.
