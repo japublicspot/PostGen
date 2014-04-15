@@ -13,6 +13,11 @@ a way to research and learn about the PostScript language.
 This is a basic interpreter that acts as a state machine to generate
 a PostScript file from a series of user-inputted commands.
 
+##Repository
+Repository for this project exists at:
+
+https://bitbucket.org/ntpeters/postscript-project
+
 ##Compilation
 Simply execute `make` in the root project directory. (ensure that you have clang installed)
 
