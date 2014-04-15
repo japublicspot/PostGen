@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <math.h>
+#include <strings.h>
 
 #include "eval.h"
 
