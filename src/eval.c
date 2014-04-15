@@ -8,40 +8,42 @@
 #include "eval.h"
 
 // The number of commands in the interpreter
-#define NUM_COMMANDS 16
+#define NUM_COMMANDS 17
 // Index that the PostScript commands begin at
-#define PS_CMD_START 4
+#define PS_CMD_START 5
 
 // Private function prototypes:
 // Evaluator for user input
 static void eval( FILE* inStream, bool psOnly );
 // Used to parse each command
-static int parseCommand( char* line, int* argc, char* args[] );
+static int parseCommand( char* line, int* argc, char* argv[] );
 // Functions for each command/state:
-static void path( int argc, char* args[] );
-static void closedPath( int argc, char* args[] );
-static void solidPath( int argc, char* args[] );
-static void curve( int argc, char* args[] );
-static void closedCurve( int argc, char* args[] );
-static void solidCurve( int argc, char* args[] );
-static void circle( int argc, char* args[] );
-static void solidCircle( int argc, char* args[] );
-static void polygon( int argc, char* args[] );
-static void solidPolygon( int argc, char* args[] );
-static void rotate( int argc, char* args[] );
-static void begin( int argc, char* args[] );
-static void end( int argc, char* args[] );
-static void loop( int argc, char* args[] );
-static void quit( int argc, char* args[] );
-static void help( int argc, char* args[] );
+static void path( int argc, char* argv[] );
+static void closedPath( int argc, char* argv[] );
+static void solidPath( int argc, char* argv[] );
+static void curve( int argc, char* argv[] );
+static void closedCurve( int argc, char* argv[] );
+static void solidCurve( int argc, char* argv[] );
+static void circle( int argc, char* argv[] );
+static void solidCircle( int argc, char* argv[] );
+static void polygon( int argc, char* argv[] );
+static void solidPolygon( int argc, char* argv[] );
+static void rotate( int argc, char* argv[] );
+static void begin( int argc, char* argv[] );
+static void end( int argc, char* argv[] );
+static void loop( int argc, char* argv[] );
+static void open( int argc, char* argv[] );
+static void quit( int argc, char* argv[] );
+static void help( int argc, char* argv[] );
 
 // List of states for the interpreter
-static void (*states[NUM_COMMANDS])(int argc, char* argsp[]) =
+static void (*states[NUM_COMMANDS])(int argc, char* argv[]) =
         {
             help,
             begin,
             end,
             quit,
+            open,
             path,
             closedPath,
             solidPath,
@@ -63,6 +65,7 @@ static char* commands[NUM_COMMANDS] =
             "begin",
             "end",
             "quit",
+            "open",
             "path",
             "closedpath",
             "solidpath",
@@ -88,19 +91,26 @@ static FILE* input = NULL;
  * Continues indefinitely, until the user quits the interpreter.
  *
  * Input:
- * None
+ * char* filename - (optional) If filename of a script is provided when program
+ *                             is executed, then open a evaluate the script.
  *
  * Returns:
  * None
  */
-void run() {
-    // Continue reading user input until the user quits
-    while(1) {
-        // Print interpreter promt
-        printf( "\n>> " );
+void run( char* filename ) {
+    // Check if a script filename was provided
+    if( filename == NULL ) {
+        // Continue reading user input until the user quits
+        while(1) {
+            // Print interpreter promt
+            printf( "\n>> " );
 
-        // Get and evaluate user input
-        eval( stdin, false );
+            // Get and evaluate user input
+            eval( stdin, false );
+        }
+    } else {
+        char* argv[2] = { "open", filename };
+        open( 2, argv );
     }
 }
 
@@ -126,14 +136,14 @@ void eval( FILE* inStream, bool psOnly ) {
 
     // Used by parseCommand
     int argc = 0;
-    char* args[30];
+    char* argv[30];
 
     // Get command from user
     char line[255];
     // Only proccess command if we successfully read something
     if( fgets( line, 255, input ) != NULL ) {
         // Parse the user command
-        int parseErr = parseCommand( line, &argc, args );
+        int parseErr = parseCommand( line, &argc, argv );
 
         // If a command was provided, try to execute it
         if( argc > 0 ) {
@@ -144,7 +154,7 @@ void eval( FILE* inStream, bool psOnly ) {
             int start = 0;
             if(psOnly) { start = PS_CMD_START; }
             for( int i = start; i < NUM_COMMANDS && parseErr == 0; i++  ) {
-                if( strcmp( commands[i], args[0] ) == 0 ) {
+                if( strcmp( commands[i], argv[0] ) == 0 ) {
                     // If we are executing a PS command, add this to file
                     if( i >= PS_CMD_START ) {
                         // Save coordinate system state
@@ -152,7 +162,7 @@ void eval( FILE* inStream, bool psOnly ) {
                     }
 
                     // Execute the command with provided args
-                    (*states[i])(argc, args);
+                    (*states[i])(argc, argv);
 
                     // If we are executing a PS command, add this to file
                     if( i >= PS_CMD_START ) {
@@ -167,7 +177,7 @@ void eval( FILE* inStream, bool psOnly ) {
 
             // Free the args list
             for( int i = 0; i < argc; i++ ) {
-                free(args[i]);
+                free(argv[i]);
             }
 
             // If an invalid command was provided, display error
@@ -191,18 +201,18 @@ void eval( FILE* inStream, bool psOnly ) {
  * int* argc    - Used to return the count of args found.
  * char* args[] - Used to return the args found.
  */
-int parseCommand( char* line, int* argc, char* args[] ) {
+int parseCommand( char* line, int* argc, char* argv[] ) {
     // Get the first argument
     char* current = strtok( line, " \n" );
     // Continue until there are no arguments left to read
     while( current != NULL ) {
         // Set the current argument in the args list
-        args[*argc] = (char*)malloc(strlen(current) + 1);
-        if( args[*argc] == NULL ) {
+        argv[*argc] = (char*)malloc(strlen(current) + 1);
+        if( argv[*argc] == NULL ) {
             printf( "\nERROR:\tUnable to allocate args list!\n" );
             return -1;
         }
-        strcpy( args[*argc], current );
+        strcpy( argv[*argc], current );
         // Increment args count
         (*argc)++;
         // Get the next argument
@@ -221,7 +231,7 @@ int parseCommand( char* line, int* argc, char* args[] ) {
  * int solid  - (optional) Whether the generated path should be filled or not.
  * int curve  - (optional) Whether the generated path is based on curves or lines.
  */
-void path( int argc, char* args[] ) {
+void path( int argc, char* argv[] ) {
     // Check if we have the correct number of arguments
     if( argc < 3 || argc > 6 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
@@ -235,8 +245,8 @@ void path( int argc, char* args[] ) {
         printf( "\nEnter a series of points (one tuple per line), and 'done' when finished:\n" );
 
         // Get the starting point of the path
-        int startX = atoi( args[1] );
-        int startY = atoi( args[2] );
+        int startX = atoi( argv[1] );
+        int startY = atoi( argv[2] );
 
         // Get path options if provided
         int closed = 0;
@@ -244,13 +254,13 @@ void path( int argc, char* args[] ) {
         int curve  = 0;
         if( argc >= 4 ) {
             // If this path should be closed or open
-            closed = atoi(args[3]);
+            closed = atoi(argv[3]);
             if( argc >= 5 ) {
                 // If this path should be filled or stroked
-                solid = atoi(args[4]);
+                solid = atoi(argv[4]);
                 if( argc == 6 ) {
                     // If this path should use curves or lines
-                    curve = atoi(args[5]);
+                    curve = atoi(argv[5]);
                 }
             }
         }
@@ -348,31 +358,31 @@ void path( int argc, char* args[] ) {
  * Input:
  * int x, y - Starting point for the path.
  */
-void closedPath( int argc, char* args[] ) {
+void closedPath( int argc, char* argv[] ) {
     // Check if we have the correct number of arguments
     if( argc != 3 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
         printf( "Usage:\tclosedpath <start_x> <start_y>\n" );
     } else {
         // Alloc space
-        args[3] = (char*)malloc(sizeof(char) + 1);
-        memset( args[3], 0, sizeof(char) + 1);
+        argv[3] = (char*)malloc(sizeof(char) + 1);
+        memset( argv[3], 0, sizeof(char) + 1);
 
         // Make sure the alloc succeeded
-        if( args[3] != NULL ) {
+        if( argv[3] != NULL ) {
             // Set the args for a solid path
-            args[3][0] = '1';
+            argv[3][0] = '1';
             argc++;
 
             // Call path with new args added
-            path(argc, args);
+            path(argc, argv);
         } else {
             printf( "\nERROR:\tFailed to allocate args list!\n" );
             return;
         }
 
         // Free the extra args we added
-        free(args[3]);
+        free(argv[3]);
     }
 }
 
@@ -382,35 +392,35 @@ void closedPath( int argc, char* args[] ) {
  * Input:
  * int x, y - Starting point for the path.
  */
-void solidPath( int argc, char* args[] ) {
+void solidPath( int argc, char* argv[] ) {
     // Check if we have the correct number of arguments
     if( argc != 3 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
         printf( "Usage:\tsolidpath <start_x> <start_y>\n" );
     } else {
         // Alloc space
-        args[3] = (char*)malloc(sizeof(char) + 1);
-        args[4] = (char*)malloc(sizeof(char) + 1);
-        memset( args[3], 0, sizeof(char) + 1);
-        memset( args[4], 0, sizeof(char) + 1);
+        argv[3] = (char*)malloc(sizeof(char) + 1);
+        argv[4] = (char*)malloc(sizeof(char) + 1);
+        memset( argv[3], 0, sizeof(char) + 1);
+        memset( argv[4], 0, sizeof(char) + 1);
 
         // Make sure the alloc succeeded
-        if( args[3] != NULL && args[4] != NULL ) {
+        if( argv[3] != NULL && argv[4] != NULL ) {
             // Set the args for a solid path
-            args[3][0] = '1';
-            args[4][0] = '1';
+            argv[3][0] = '1';
+            argv[4][0] = '1';
             argc += 2;
 
             // Call path with new args added
-            path(argc, args);
+            path(argc, argv);
         } else {
             printf( "\nERROR:\tFailed to allocate args list!\n" );
             return;
         }
 
         // Free the extra args we added
-        free(args[3]);
-        free(args[4]);
+        free(argv[3]);
+        free(argv[4]);
     }
 }
 
@@ -420,40 +430,40 @@ void solidPath( int argc, char* args[] ) {
  * Input:
  * int x, y - Starting point for the path.
  */
-void curve( int argc, char* args[] ) {
+void curve( int argc, char* argv[] ) {
     // Check if we have the correct number of arguments
     if( argc != 3 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
         printf( "Usage:\tcurve <start_x> <start_y>\n" );
     } else {
         // Alloc space
-        args[3] = (char*)malloc(sizeof(char) + 1);
-        args[4] = (char*)malloc(sizeof(char) + 1);
-        args[5] = (char*)malloc(sizeof(char) + 1);
-        memset( args[3], 0, sizeof(char) + 1);
-        memset( args[4], 0, sizeof(char) + 1);
-        memset( args[5], 0, sizeof(char) + 1);
+        argv[3] = (char*)malloc(sizeof(char) + 1);
+        argv[4] = (char*)malloc(sizeof(char) + 1);
+        argv[5] = (char*)malloc(sizeof(char) + 1);
+        memset( argv[3], 0, sizeof(char) + 1);
+        memset( argv[4], 0, sizeof(char) + 1);
+        memset( argv[5], 0, sizeof(char) + 1);
 
 
         // Make sure the alloc succeeded
-        if( args[3] != NULL && args[4] != NULL && args[5] != NULL ) {
+        if( argv[3] != NULL && argv[4] != NULL && argv[5] != NULL ) {
             // Set the args for a solid path
-            args[3][0] = '0';
-            args[4][0] = '0';
-            args[5][0] = '1';
+            argv[3][0] = '0';
+            argv[4][0] = '0';
+            argv[5][0] = '1';
             argc += 3;
 
             // Call path with new args added
-            path(argc, args);
+            path(argc, argv);
         } else {
             printf( "\nERROR:\tFailed to allocate args list!\n" );
             return;
         }
 
         // Free the extra args we added
-        free(args[3]);
-        free(args[4]);
-        free(args[5]);
+        free(argv[3]);
+        free(argv[4]);
+        free(argv[5]);
     }
 }
 
@@ -463,39 +473,39 @@ void curve( int argc, char* args[] ) {
  * Input:
  * int x, y - Starting point for the path.
  */
-void closedCurve( int argc, char* args[] ) {
+void closedCurve( int argc, char* argv[] ) {
     // Check if we have the correct number of arguments
     if( argc != 3 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
         printf( "Usage:\tclosedcurve <start_x> <start_y>\n" );
     } else {
         // Alloc space
-        args[3] = (char*)malloc(sizeof(char) + 1);
-        args[4] = (char*)malloc(sizeof(char) + 1);
-        args[5] = (char*)malloc(sizeof(char) + 1);
-        memset( args[3], 0, sizeof(char) + 1);
-        memset( args[4], 0, sizeof(char) + 1);
-        memset( args[5], 0, sizeof(char) + 1);
+        argv[3] = (char*)malloc(sizeof(char) + 1);
+        argv[4] = (char*)malloc(sizeof(char) + 1);
+        argv[5] = (char*)malloc(sizeof(char) + 1);
+        memset( argv[3], 0, sizeof(char) + 1);
+        memset( argv[4], 0, sizeof(char) + 1);
+        memset( argv[5], 0, sizeof(char) + 1);
 
         // Make sure the alloc succeeded
-        if( args[3] != NULL && args[4] != NULL && args[5] != NULL ) {
+        if( argv[3] != NULL && argv[4] != NULL && argv[5] != NULL ) {
             // Set the args for a solid path
-            args[3][0] = '1';
-            args[4][0] = '0';
-            args[5][0] = '1';
+            argv[3][0] = '1';
+            argv[4][0] = '0';
+            argv[5][0] = '1';
             argc += 3;
 
             // Call path with new args added
-            path(argc, args);
+            path(argc, argv);
         } else {
             printf( "\nERROR:\tFailed to allocate args list!\n" );
             return;
         }
 
         // Free the extra args we added
-        free(args[3]);
-        free(args[4]);
-        free(args[5]);
+        free(argv[3]);
+        free(argv[4]);
+        free(argv[5]);
     }
 }
 
@@ -505,39 +515,39 @@ void closedCurve( int argc, char* args[] ) {
  * Input:
  * int x, y - Starting point for the path.
  */
-void solidCurve( int argc, char* args[] ) {
+void solidCurve( int argc, char* argv[] ) {
     // Check if we have the correct number of arguments
     if( argc != 3 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
         printf( "Usage:\tcurve <start_x> <start_y>\n" );
     } else {
         // Alloc space
-        args[3] = (char*)malloc(sizeof(char) + 1);
-        args[4] = (char*)malloc(sizeof(char) + 1);
-        args[5] = (char*)malloc(sizeof(char) + 1);
-        memset( args[3], 0, sizeof(char) + 1);
-        memset( args[4], 0, sizeof(char) + 1);
-        memset( args[5], 0, sizeof(char) + 1);
+        argv[3] = (char*)malloc(sizeof(char) + 1);
+        argv[4] = (char*)malloc(sizeof(char) + 1);
+        argv[5] = (char*)malloc(sizeof(char) + 1);
+        memset( argv[3], 0, sizeof(char) + 1);
+        memset( argv[4], 0, sizeof(char) + 1);
+        memset( argv[5], 0, sizeof(char) + 1);
 
         // Make sure the alloc succeeded
-        if( args[3] != NULL && args[4] != NULL && args[5] != NULL ) {
+        if( argv[3] != NULL && argv[4] != NULL && argv[5] != NULL ) {
             // Set the args for a solid path
-            args[3][0] = '1';
-            args[4][0] = '1';
-            args[5][0] = '1';
+            argv[3][0] = '1';
+            argv[4][0] = '1';
+            argv[5][0] = '1';
             argc += 3;
 
             // Call path with new args added
-            path(argc, args);
+            path(argc, argv);
         } else {
             printf( "\nERROR:\tFailed to allocate args list!\n" );
             return;
         }
 
         // Free the extra args we added
-        free(args[3]);
-        free(args[4]);
-        free(args[5]);
+        free(argv[3]);
+        free(argv[4]);
+        free(argv[5]);
     }
 }
 
@@ -548,7 +558,7 @@ void solidCurve( int argc, char* args[] ) {
  * int x, y - The center coordinates of the circle.
  * int r    - The radius of the circle.
  */
-void circle( int argc, char* args[] ) {
+void circle( int argc, char* argv[] ) {
     // Check if we have the correct number of arguments
     if( argc != 4 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
@@ -560,9 +570,9 @@ void circle( int argc, char* args[] ) {
         }
 
         // Get the argument values
-        int x = atoi(args[1]);
-        int y = atoi(args[2]);
-        int r = atoi(args[3]);
+        int x = atoi(argv[1]);
+        int y = atoi(argv[2]);
+        int r = atoi(argv[3]);
 
         // Create the circle
         fprintf( session, "%d %d %d 0 360 arc\n", x, y, r );
@@ -577,7 +587,7 @@ void circle( int argc, char* args[] ) {
  * int x, y - The center coordinates of the circle.
  * int r    - The radius of the circle.
  */
-void solidCircle( int argc, char* args[] ) {
+void solidCircle( int argc, char* argv[] ) {
     // Check if we have the correct number of arguments
     if( argc != 4 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
@@ -589,9 +599,9 @@ void solidCircle( int argc, char* args[] ) {
         }
 
         // Get the argument values
-        int x = atoi(args[1]);
-        int y = atoi(args[2]);
-        int r = atoi(args[3]);
+        int x = atoi(argv[1]);
+        int y = atoi(argv[2]);
+        int r = atoi(argv[3]);
 
         // Create the circle
         fprintf( session, "%d %d %d 0 360 arc\n", x, y, r );
@@ -608,7 +618,7 @@ void solidCircle( int argc, char* args[] ) {
  * int n     - The number of sides of the polygon.
  * int solid - (optional) Whether the polygon should be filled or not.
  */
-void polygon( int argc, char* args[] ) {
+void polygon( int argc, char* argv[] ) {
     // Check if we have the correct number of arguments
     if( argc < 5 || argc > 6 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
@@ -620,15 +630,15 @@ void polygon( int argc, char* args[] ) {
         }
 
         // Get the argument values
-        float x = atof(args[1]);
-        float y = atof(args[2]);
-        float r = atof(args[3]);
-        float n = atof(args[4]);
+        float x = atof(argv[1]);
+        float y = atof(argv[2]);
+        float r = atof(argv[3]);
+        float n = atof(argv[4]);
 
         // Get the solid setting arg
         int solid = 0;
         if( argc == 6 ) {
-            solid = atoi(args[5]);
+            solid = atoi(argv[5]);
         }
 
         // Calculate the all the points for the polygon
@@ -667,31 +677,31 @@ void polygon( int argc, char* args[] ) {
  * int r     - The radius of the polygon.
  * int n     - The number of sides of the polygon.
  */
-void solidPolygon( int argc, char* args[] ) {
+void solidPolygon( int argc, char* argv[] ) {
     // Check if we have the correct number of arguments
     if( argc != 5 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
         printf( "Usage:\tsolidpolygon <center_x> <center_y> <radius> <sides>\n" );
     } else {
         // Alloc space
-        args[5] = (char*)malloc(sizeof(char) + 1);
-        memset( args[5], 0, sizeof(char) + 1 );
+        argv[5] = (char*)malloc(sizeof(char) + 1);
+        memset( argv[5], 0, sizeof(char) + 1 );
 
         // Make sure the alloc succeeded
-        if( args[5] != NULL ) {
+        if( argv[5] != NULL ) {
             // Set the args for a solid path
-            args[5][0] = '1';
+            argv[5][0] = '1';
             argc++;
 
             // Call path with new args added
-            polygon(argc, args);
+            polygon(argc, argv);
         } else {
             printf( "\nERROR:\tFailed to allocate args list!\n" );
             return;
         }
 
         // Free the extra args we added
-        free(args[5]);
+        free(argv[5]);
     }
 }
 /*
@@ -700,7 +710,7 @@ void solidPolygon( int argc, char* args[] ) {
  * Input:
  * int deg - degrees to rotate by
  */
-void rotate( int argc, char* args[] ) {
+void rotate( int argc, char* argv[] ) {
     // Check if we have the correct number of arguments
     if( argc != 2 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
@@ -711,7 +721,7 @@ void rotate( int argc, char* args[] ) {
             return;
         }
 
-        int deg = strtol( args[1], NULL, 10 );
+        int deg = strtol( argv[1], NULL, 10 );
         if( errno != 0 ) {
             printf( "\nERROR:\tArguments must be numbers!\n" );
             return;
@@ -746,7 +756,7 @@ void rotate( int argc, char* args[] ) {
  * Input:
  * char* name - The name of the session.
  */
-void begin( int argc, char* args[] ) {
+void begin( int argc, char* argv[] ) {
     // Check if we have the correct number of arguments
     if( argc != 2 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
@@ -767,7 +777,7 @@ void begin( int argc, char* args[] ) {
             }
         }
         // Get the name of the session to create
-        char* name = args[1];
+        char* name = argv[1];
 
         // File extension
         char* ext = ".ps";
@@ -800,7 +810,7 @@ void begin( int argc, char* args[] ) {
  *  Input:
  *  None
  */
-void end( int argc, char* args[] ) {
+void end( int argc, char* argv[] ) {
     // Check if we have the correct number of arguments
     if( argc != 1 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
@@ -830,7 +840,7 @@ void end( int argc, char* args[] ) {
  * Input:
  * int r - Number of times to repeat loop.
  */
-void loop( int argc, char* args[] ) {
+void loop( int argc, char* argv[] ) {
     // Check if we have the correct number of arguments
     if( argc != 2 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
@@ -841,7 +851,7 @@ void loop( int argc, char* args[] ) {
             return;
         }
 
-        int count = strtol( args[1], NULL, 10 );
+        int count = strtol( argv[1], NULL, 10 );
         if( errno != 0 ) {
             printf( "\nERROR:\tArguments must be numbers!\n" );
             return;
@@ -873,12 +883,56 @@ void loop( int argc, char* args[] ) {
 }
 
 /*
+ * Opens and evaluates a script file that conforms to this interpreter.
+ *
+ * Input:
+ * char* filename - Name of the script file to open.
+ */
+void open( int argc, char* argv[] ) {
+    // Check if we have the correct number of arguments
+    if( argc != 2 ) {
+        printf( "\nERROR:\tInvalid number of arguments provided!\n" );
+        printf( "Usage:\topen <filename>\n" );
+    } else {
+        // Check the file extension of the file
+        char* extension = index( argv[1], '.' );
+        if( extension == NULL || strcmp(extension, ".pscript") != 0 ) {
+            printf( "\nERROR:\tUnsuppored filetype! Expected '.pscript' file!\n" );
+            return;
+        }
+
+        // Close the session first
+        if( session != NULL ) {
+            printf( "Closing current session before loading script.\n" );
+            end( 1, NULL );
+        }
+
+        // Open the file
+        FILE* script = fopen( argv[1], "r" );
+
+        // Check if open succeeded
+        if( script == NULL ) {
+            printf( "\nERROR:\tFailed to open script file!\n" );
+            return;
+        } else {
+            // Evaluate the script
+            while( !feof(script) ) {
+                eval(script, false);
+            }
+
+            // Close the file
+            fclose(script);
+        }
+    }
+}
+
+/*
  * Command state to quit the program.
  *
  * Input:
  * None
  */
-void quit( int argc, char* args[] ) {
+void quit( int argc, char* argv[] ) {
     // Check if we have the correct number of arguments
     if( argc != 1 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
@@ -890,9 +944,12 @@ void quit( int argc, char* args[] ) {
         }
 
         // Free the args value for this call
-        free(args[0]);
+        free(argv[0]);
 
         printf( "Closing interpreter...\n" );
+
+        // Close the input stream
+        fclose(input);
 
         // Exit the program successfully
         exit(EXIT_SUCCESS);
@@ -905,7 +962,7 @@ void quit( int argc, char* args[] ) {
  * Input:
  * None
  */
-void help( int argc, char* args[] ) {
+void help( int argc, char* argv[] ) {
     // Check if we have the correct number of arguments
     if( argc != 1 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
@@ -942,6 +999,7 @@ void help( int argc, char* args[] ) {
                 "                                       \tPolygon has given radius and number of sides.\n" );
         printf( "\nrotate [degrees]                     \tRotates the given construct by the given number of degrees.\n" );
         printf( "\nloop [count]                         \tRepeats the given construct count times.\n" );
+        printf( "\nopen [filename]                      \tOpens the given script file and evaluates it.\n ");
         printf( "\nquit                                 \tCloses any open session and exits the interpreter.\n" );
         printf( "\nhelp                                 \tDisplays this dialog.\n" );
     }

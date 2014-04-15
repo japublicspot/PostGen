@@ -11,7 +11,7 @@ This is a basic interpreter that acts as a state machine to generate
 a PostScript file from a series of user-inputted commands.
 
 ##Commands
-###begin [name]                            
+###begin [name]
 Starts a new session with the given name.
 
 This creates a PostScript file of the given name.
@@ -70,6 +70,9 @@ Rotates the given construct by the given number of degrees.
 
 ###loop [count]
 Repeats the given construct count times.
+
+###open [filename]
+Opens the given script file and evaluates it.
 
 ###quit
 Closes any open sessions and exits the interpreter.

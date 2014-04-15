@@ -3,6 +3,6 @@
 
 // Public function prototypes:
 // Starts the main interpreter loop
-void run();
+void run(char* filename);
 
 #endif

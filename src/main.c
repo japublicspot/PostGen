@@ -11,7 +11,7 @@
 // Version string
 const char* version = "Development Build";
 
-int main( int argc, char* arg[] ) {
+int main( int argc, char* argv[] ) {
 
     // Print program info
     printf( "interPS - PostScript Interpreter\n" );
@@ -19,5 +19,9 @@ int main( int argc, char* arg[] ) {
     printf( "Enter a command, or 'help' to view available commands.\n" );
 
     // Start the interpreter
-    run();
+    if( argc == 2 ) {
+        run(argv[1]);
+    } else {
+        run(NULL);
+    }
 }
