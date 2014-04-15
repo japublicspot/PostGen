@@ -10,6 +10,11 @@ Connor Wlodarczak
 This is a basic interpreter that acts as a state machine to generate
 a PostScript file from a series of user-inputted commands.
 
+##Compilation
+Simply execute `make` in the root project directory. (ensure that you have clang installed)
+
+An executable will be created at `./bin/interPS`.
+
 ##Usage
 Run the interpreter by executing `./interPS`
 
