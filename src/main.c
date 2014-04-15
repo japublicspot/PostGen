@@ -4,6 +4,8 @@
  * Connor Wlodarczak
  */
 
+#include <stdio.h>
+
 #include "eval.h"
 
 // Version string

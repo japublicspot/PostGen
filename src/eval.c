@@ -1,7 +1,14 @@
+#include <stdio.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <math.h>
+
 #include "eval.h"
 
 // The number of commands in the interpreter
-#define NUM_COMMANDS 14
+#define NUM_COMMANDS 16
 // Index that the PostScript commands begin at
 #define PS_CMD_START 4
 
@@ -19,6 +26,8 @@ static void closedCurve( int argc, char* args[] );
 static void solidCurve( int argc, char* args[] );
 static void circle( int argc, char* args[] );
 static void solidCircle( int argc, char* args[] );
+static void polygon( int argc, char* args[] );
+static void solidPolygon( int argc, char* args[] );
 static void rotate( int argc, char* args[] );
 static void begin( int argc, char* args[] );
 static void end( int argc, char* args[] );
@@ -41,6 +50,8 @@ static void (*states[NUM_COMMANDS])(int argc, char* argsp[]) =
             solidCurve,
             circle,
             solidCircle,
+            polygon,
+            solidPolygon,
             rotate,
             loop
         };
@@ -60,6 +71,8 @@ static char* commands[NUM_COMMANDS] =
             "solidcurve",
             "circle",
             "solidcircle",
+            "polygon",
+            "solidpolygon",
             "rotate",
             "loop"
         };
@@ -574,6 +587,100 @@ void solidCircle( int argc, char* args[] ) {
 }
 
 /*
+ * Command state for drawing an n-sided polygon.
+ *
+ * Input:
+ * int x, y  - The center coordinates of the polygon.
+ * int r     - The radius of the polygon.
+ * int n     - The number of sides of the polygon.
+ * int solid - (optional) Whether the polygon should be filled or not.
+ */
+void polygon( int argc, char* args[] ) {
+    // Check if we have the correct number of arguments
+    if( argc < 5 || argc > 6 ) {
+        printf( "\nERROR:\tInvalid number of arguments provided!\n" );
+        printf( "Usage:\tpolygon <center_x> <center_y> <radius> <sides>\n" );
+    } else {
+        if( session == NULL ) {
+            printf( "\nERROR:\tNo active session!\n" );
+            return;
+        }
+
+        // Get the argument values
+        float x = atof(args[1]);
+        float y = atof(args[2]);
+        float r = atof(args[3]);
+        float n = atof(args[4]);
+
+        // Get the solid setting arg
+        int solid = 0;
+        if( argc == 6 ) {
+            solid = atoi(args[5]);
+        }
+
+        // Calculate the all the points for the polygon
+        for( int i = 0; i < n; i++ ) {
+            // Get the x,y for the next point
+            float curX = r * cos( 2.0 * M_PI * (i/n) ) + x;
+            float curY = r * sin( 2.0 * M_PI * (i/n) ) + y;
+
+            // Write the current point
+            fprintf( session, "%f %f", curX, curY );
+            if( i == 0 ) {
+                // If this is the first point move into position
+                fprintf( session, " moveto\n");
+            } else {
+                // Set lines for all other points
+                fprintf( session, " lineto\n" );
+            }
+        }
+
+        // Close the path to complete the polygon
+        fprintf( session, "closepath\n" );
+
+        // Draw the polygon
+        if(solid) {
+            fprintf( session, "fill\n" );
+        } else {
+            fprintf( session, "stroke\n" );
+        }
+    }
+}
+
+/* Command state for drawing a filled n-sided polygon.
+ *
+ * Input:
+ * int x, y  - The center coordinates of the polygon.
+ * int r     - The radius of the polygon.
+ * int n     - The number of sides of the polygon.
+ */
+void solidPolygon( int argc, char* args[] ) {
+    // Check if we have the correct number of arguments
+    if( argc != 5 ) {
+        printf( "\nERROR:\tInvalid number of arguments provided!\n" );
+        printf( "Usage:\tsolidpolygon <center_x> <center_y> <radius> <sides>\n" );
+    } else {
+        // Alloc space
+        args[5] = (char*)malloc(sizeof(int));
+
+        // Make sure the alloc succeeded
+        if( args[5] != NULL ) {
+            // Set the args for a solid path
+            args[5][0] = '1';
+            argc++;
+
+            // Call path with new args added
+            polygon(argc, args);
+        } else {
+            printf( "\nERROR:\tFailed to allocate args list!\n" );
+            return;
+        }
+
+        // Free the extra args we added
+        free(args[5]);
+    }
+}
+/*
  * Command state to execute rotations
  *
  * Input:
@@ -798,26 +905,30 @@ void help( int argc, char* args[] ) {
                 "Prior to executing any commands, a session must first be created \n"
                 "which sets up the PostScript file that is being constructed.\n" );
         printf( "\nCommands:" );
-        printf( "\nbegin [name]                \tStarts a new session with the given name.\n" );
-        printf( "                              \tThis creates a PostScript file of the given name.\n" );
-        printf( "\nend                         \tEnds the current session and closes its file.\n" );
-        printf( "\npath [x] [y]                \tConstructs a user-defined, open path, starting at (x,y).\n"
-                "                              \tContinues to read tuples in until the user enters 'done'.\n" );
-        printf( "\nclosedpath [x] [y]          \tConstructs a user-defined, closed path, starting at (x,y).\n"
-                "                              \t Continues to read tuples in until the user enters 'done'.\n" );
-        printf( "\nsolidpath [x] [y]           \tConstructs a user-defined, filled path, starting at (x,y).\n"
-                "                              \t Continues to read tuples in until the user enters 'done'.\n" );
-        printf( "\ncurve [x] [y]               \tConstructs a user-defined, bezier curve, starting at (x,y).\n"
-                "                              \tContinues to read tuples in until the user enters 'done'.\n" );
-        printf( "\nclosedcurve [x] [y]         \tConstructs a user-defined, closed bezier curve, starting at (x,y).\n"
-                "                              \t Continues to read tuples in until the user enters 'done'.\n" );
-        printf( "\nsolidcurve [x] [y]          \tConstructs a user-defined, filled bezier curve, starting at (x,y).\n"
-                "                              \t Continues to read tuples in until the user enters 'done'.\n" );
-        printf( "\ncircle [x] [y] [radius]     \tConstructs a circle with center at (x,y) and the given radius.\n" );
-        printf( "\nsolidcircle [x] [y] [radius]\tConstructs a filled circle with center at (x,y), and the given radius.\n" );
-        printf( "\nrotate [degrees]            \tRotates the given construct by the given number of degrees.\n" );
-        printf( "\nloop [count]                \tRepeats the given construct count times.\n" );
-        printf( "\nquit                        \tCloses any open session and exits the interpreter.\n" );
-        printf( "\nhelp                        \tDisplays this dialog.\n" );
+        printf( "\nbegin [name]                         \tStarts a new session with the given name.\n" );
+        printf( "                                       \tThis creates a PostScript file of the given name.\n" );
+        printf( "\nend                                  \tEnds the current session and closes its file.\n" );
+        printf( "\npath [x] [y]                         \tConstructs a user-defined, open path, starting at (x,y).\n"
+                "                                       \tContinues to read tuples in until the user enters 'done'.\n" );
+        printf( "\nclosedpath [x] [y]                   \tConstructs a user-defined, closed path, starting at (x,y).\n"
+                "                                       \tContinues to read tuples in until the user enters 'done'.\n" );
+        printf( "\nsolidpath [x] [y]                    \tConstructs a user-defined, filled path, starting at (x,y).\n"
+                "                                       \tContinues to read tuples in until the user enters 'done'.\n" );
+        printf( "\ncurve [x] [y]                        \tConstructs a user-defined, bezier curve, starting at (x,y).\n"
+                "                                       \tContinues to read tuples in until the user enters 'done'.\n" );
+        printf( "\nclosedcurve [x] [y]                  \tConstructs a user-defined, closed bezier curve, starting at (x,y).\n"
+                "                                       \tContinues to read tuples in until the user enters 'done'.\n" );
+        printf( "\nsolidcurve [x] [y]                   \tConstructs a user-defined, filled bezier curve, starting at (x,y).\n"
+                "                                       \tContinues to read tuples in until the user enters 'done'.\n" );
+        printf( "\ncircle [x] [y] [radius]              \tConstructs a circle with center at (x,y) and the given radius.\n" );
+        printf( "\nsolidcircle [x] [y] [radius]         \tConstructs a filled circle with center at (x,y), and the given radius.\n" );
+        printf( "\npolygon [x] [y] [radius] [sides]     \tConstructs an n-sided polygon centered at (x,y).\n"
+                "                                       \tPolygon has given radius and number of sides.\n" );
+        printf( "\nsolidpolygon [x] [y] [radius] [sides]\tConstructs a filled n-sided polygon centered at (x,y).\n"
+                "                                       \tPolygon has given radius and number of sides.\n" );
+        printf( "\nrotate [degrees]                     \tRotates the given construct by the given number of degrees.\n" );
+        printf( "\nloop [count]                         \tRepeats the given construct count times.\n" );
+        printf( "\nquit                                 \tCloses any open session and exits the interpreter.\n" );
+        printf( "\nhelp                                 \tDisplays this dialog.\n" );
     }
 }

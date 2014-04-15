@@ -7,7 +7,7 @@ all: $(PROG)
 
 $(PROG): $(OBJS)
 	mkdir -p ./bin
-	$(CC) $(CFLAGS) -o $(PROG) $(OBJS)
+	$(CC) $(CFLAGS) -o $(PROG) $(OBJS) -lm
 
 clean:
 	rm -f $(PROG) $(OBJS)
