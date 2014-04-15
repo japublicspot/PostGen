@@ -11,7 +11,16 @@
 // Version string
 const char* version = "Development Build";
 
+/*
+ * Starts the interpreter.
+ * If a script file is provided at runtime, then it will be evaluated.
+ */
 int main( int argc, char* argv[] ) {
+    if( argc > 2 ) {
+        printf( "Too many arguments provided!\n" );
+        printf( "Usage: interPS [filename] (optional)\n" );
+        exit(EXIT_FAILURE);
+    }
 
     // Print program info
     printf( "interPS - PostScript Interpreter\n" );
