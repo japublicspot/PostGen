@@ -1,0 +1,11 @@
+begin smile
+solidcircle 100 500 50
+solidcircle 500 500 50
+solidcurve 100 400
+325 300
+375 300
+500 400
+done
+end
+quit
+
