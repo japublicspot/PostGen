@@ -13,7 +13,10 @@ a PostScript file from a series of user-inputted commands.
 ##Usage
 Run the interpreter by executing `./interPS`
 
-When executing the intperpreter a filename may also optionally be provided: `./interPS script.pscript`
+When executing the intperpreter a filename may also optionally be provided:
+```
+./interPS script.pscript
+```
 
 When a filename is provided, the interpreter will open and evaluate the contents of that file.
 The file must be of type `.pscript`, and must be implemented using only commands supported by the interpreter as defined below.
