@@ -24,7 +24,7 @@ int main( int argc, char* argv[] ) {
     }
 
     // Print program info
-    printf( "interPS - PostScript Interpreter\n" );
+    printf( "interPS - PostScript Generator\n" );
     printf( "Version: %s\n", version );
     printf( "Enter a command, or 'help' to view available commands.\n" );
 

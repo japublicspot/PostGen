@@ -1,5 +1,5 @@
 #PostScript Language Project
-CS4121
+CS4121 - Programming Languages
 
 ## Group
 Nathan Peterson
@@ -7,6 +7,9 @@ Nathan Peterson
 Connor Wlodarczak
 
 ##Description
+This program was created as a project for a Programming Languages class as
+a way to research and learn about the PostScript language.
+
 This is a basic interpreter that acts as a state machine to generate
 a PostScript file from a series of user-inputted commands.
 
@@ -26,7 +29,7 @@ When executing the intperpreter a filename may also optionally be provided:
 When a filename is provided, the interpreter will open and evaluate the contents of that file.
 The file must be of type `.pscript`, and must be implemented using only commands supported by the interpreter as defined below.
 
-There are a couple of script examples in the folder `sample-scripts`.
+There are a several script examples in the folder `sample-scripts` that can be executed as described above.
 
 If no file is specified, then the interpreter executes normally and enters an eval loop.
 You must start by issueing `begin` with a session name.

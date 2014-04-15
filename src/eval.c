@@ -200,7 +200,7 @@ void eval( FILE* inStream, bool psOnly ) {
  * Input:
  * char* line   - The line of input to be parsed.
  * int* argc    - Used to return the count of args found.
- * char* args[] - Used to return the args found.
+ * char* argv[] - Used to return the args found.
  */
 int parseCommand( char* line, int* argc, char* argv[] ) {
     // Get the first argument
