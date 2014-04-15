@@ -1,7 +1,7 @@
 #include "eval.h"
 
 // The number of commands in the interpreter
-#define NUM_COMMANDS 7
+#define NUM_COMMANDS 9
 // Index that the PostScript commands begin at
 #define PS_CMD_START 4
 
@@ -12,6 +12,8 @@ static void eval( FILE* inStream, bool psOnly );
 static int parseCommand( char* line, int* argc, char* args[] );
 // Functions for each command/state:
 static void path( int argc, char* args[] );
+static void closedPath( int argc, char* args[] );
+static void solidPath( int argc, char* args[] );
 static void rotate( int argc, char* args[] );
 static void begin( int argc, char* args[] );
 static void end( int argc, char* args[] );
@@ -27,6 +29,8 @@ static void (*states[NUM_COMMANDS])(int argc, char* argsp[]) =
             end,
             quit,
             path,
+            closedPath,
+            solidPath,
             rotate,
             loop
         };
@@ -39,6 +43,8 @@ static char* commands[NUM_COMMANDS] =
             "end",
             "quit",
             "path",
+            "closedpath",
+            "solidpath",
             "rotate",
             "loop"
         };
@@ -111,8 +117,22 @@ void eval( FILE* inStream, bool psOnly ) {
             if(psOnly) { start = PS_CMD_START; }
             for( int i = start; i < NUM_COMMANDS && parseErr == 0; i++  ) {
                 if( strcmp( commands[i], args[0] ) == 0 ) {
+                    // If we are executing a PS command, add this to file
+                    if( i >= PS_CMD_START ) {
+                        // Save coordinate system state
+                        fprintf( session, "gsave\n" );
+                    }
+
                     // Execute the command with provided args
                     (*states[i])(argc, args);
+
+                    // If we are executing a PS command, add this to file
+                    if( i >= PS_CMD_START ) {
+                        // Restore state
+                        fprintf( session, "grestore\n" );
+                    }
+
+                    // We found a valid command
                     found = true;
                 }
             }
@@ -172,7 +192,7 @@ int parseCommand( char* line, int* argc, char* args[] ) {
  */
 void path( int argc, char* args[] ) {
     // Check if we have the correct number of arguments
-    if( argc != 3 ) {
+    if( argc < 3 || argc > 5 ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
         printf( "Usage:\tpath <start_x> <start_y>\n" );
     } else {
@@ -186,6 +206,18 @@ void path( int argc, char* args[] ) {
         // Get the starting point of the path
         int startX = atoi( args[1] );
         int startY = atoi( args[2] );
+
+        // Get path options if provided
+        int closed = 0;
+        int solid = 0;
+        if( argc >= 4 ) {
+            // If this path should be closed or open
+            closed = atoi(args[3]);
+            if( argc == 5 ) {
+                // If this path should be filled or stroked
+                solid = atoi(args[4]);
+            }
+        }
 
         // Begin the path in the file
         fprintf( session, "newpath\n" );
@@ -203,9 +235,15 @@ void path( int argc, char* args[] ) {
 
                 // If the argument is 'done', exit this state
                 if( strcmp( first, "done" ) == 0 ) {
-                    // Close the path and apply the stroke
-                    fprintf( session, "closepath\n" );
-                    fprintf( session, "stroke\n" );
+                    // Close the path
+                    if(closed) {
+                        fprintf( session, "closepath\n" );
+                    }
+                    if(solid) {
+                        fprintf( session, "fill\n" );
+                    } else {
+                        fprintf( session, "stroke\n" );
+                    }
                     break;
                 } else {
                     // Retreive the arguments
@@ -244,6 +282,75 @@ void path( int argc, char* args[] ) {
 }
 
 /*
+ * Command state for drawing a user-defined closed path.
+ *
+ * Input:
+ * int x, y - Starting point for the path.
+ */
+void closedPath( int argc, char* args[] ) {
+    // Check if we have the correct number of arguments
+    if( argc != 3 ) {
+        printf( "\nERROR:\tInvalid number of arguments provided!\n" );
+        printf( "Usage:\tclosedpath <start_x> <start_y>\n" );
+    } else {
+        // Alloc space
+        args[3] = (char*)malloc(sizeof(int));
+
+        // Make sure the alloc succeeded
+        if( args[3] != NULL ) {
+            // Set the args for a solid path
+            args[3][0] = '1';
+            argc++;
+
+            // Call path with new args added
+            path(argc, args);
+        } else {
+            printf( "\nERROR:\tFailed to allocate args list!\n" );
+            return;
+        }
+
+        // Free the extra args we added
+        free(args[3]);
+    }
+}
+
+/*
+ * Command state for drawing a user-defined solid path.
+ *
+ * Input:
+ * int x, y - Starting point for the path.
+ */
+void solidPath( int argc, char* args[] ) {
+    // Check if we have the correct number of arguments
+    if( argc != 3 ) {
+        printf( "\nERROR:\tInvalid number of arguments provided!\n" );
+        printf( "Usage:\tsolidpath <start_x> <start_y>\n" );
+    } else {
+        // Alloc space
+        args[3] = (char*)malloc(sizeof(int));
+        args[4] = (char*)malloc(sizeof(int));
+
+        // Make sure the alloc succeeded
+        if( args[3] != NULL && args[4] != NULL ) {
+            // Set the args for a solid path
+            args[3][0] = '1';
+            args[4][0] = '1';
+            argc += 2;
+
+            // Call path with new args added
+            path(argc, args);
+        } else {
+            printf( "\nERROR:\tFailed to allocate args list!\n" );
+            return;
+        }
+
+        // Free the extra args we added
+        free(args[3]);
+        free(args[4]);
+    }
+}
+
+/*
  * Command state to execute rotations
  *
  * Input:
@@ -266,8 +373,6 @@ void rotate( int argc, char* args[] ) {
             return;
         }
 
-        // Save coordinate system state
-        fprintf( session, "gsave\n" );
         // Apply the rotation
         fprintf( session, "%d rotate\n", deg );
         while(1) {
@@ -286,8 +391,6 @@ void rotate( int argc, char* args[] ) {
                 break;
             }
         }
-        // Restore coordinate system state
-        fprintf( session, "grestore\n" );
 
         printf( "Rotate block finished. Result of block will be rotated %d degrees.\n", deg );
     }
@@ -472,14 +575,18 @@ void help( int argc, char* args[] ) {
                 "Prior to executing any commands, a session must first be created \n"
                 "which sets up the PostScript file that is being constructed.\n" );
         printf( "\nCommands:" );
-        printf( "\nbegin [name]    \tStarts a new session with the given name.\n" );
-        printf( "                  \tThis creates a PostScript file of the given name.\n" );
-        printf( "\nend             \tEnds the current session and closes its file.\n" );
-        printf( "\npath [x] [y]    \tConstructs a user-defined path, starting at (x,y).\n"
-                "                  \tContinues to read tuples in until the user enters 'done'.\n" );
-        printf( "\nrotate [degrees]\tRotates the given construct by the given number of degrees.\n" );
-        printf( "\nloop [count]    \tRepeats the given construct count times.\n" );
-        printf( "\nquit            \tCloses any open session and exits the interpreter.\n" );
-        printf( "\nhelp            \tDisplays this dialog.\n" );
+        printf( "\nbegin [name]       \tStarts a new session with the given name.\n" );
+        printf( "                     \tThis creates a PostScript file of the given name.\n" );
+        printf( "\nend                \tEnds the current session and closes its file.\n" );
+        printf( "\npath [x] [y]       \tConstructs a user-defined, open path, starting at (x,y).\n"
+                "                     \tContinues to read tuples in until the user enters 'done'.\n" );
+        printf( "\nclosedpath [x] [y] \tConstructs a user-defined, closed path, starting at (x,y).\n"
+                "                     \t Continues to read tuples in until the user enters 'done'.\n" );
+        printf( "\nsolidpath [x] [y]  \tConstructs a user-defined, filled path, starting at (x,y).\n"
+                "                     \t Continues to read tuples in until the user enters 'done'.\n" );
+        printf( "\nrotate [degrees]   \tRotates the given construct by the given number of degrees.\n" );
+        printf( "\nloop [count]       \tRepeats the given construct count times.\n" );
+        printf( "\nquit               \tCloses any open session and exits the interpreter.\n" );
+        printf( "\nhelp               \tDisplays this dialog.\n" );
     }
 }
