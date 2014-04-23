@@ -6,7 +6,7 @@
 
 /* PostGen
  *
- * PostGen is a basic interpretter that acts as a state machine to handle user
+ * PostGen is a basic interpreter that acts as a state machine to handle user
  * inputted commands in order to generate a corresponding PostScript file.
  */
 
@@ -40,7 +40,7 @@ int main( int argc, char* argv[] ) {
         // Evaluate the contents of the defined script file
         run(argv[1]);
     } else {
-        // Run the interpretter interactively
+        // Run the interpreter interactively
         run(NULL);
     }
 }
