@@ -1,3 +1,22 @@
+/* PostScript Language Project
+ * CS4121 - Programming Languages
+ * Nathan Peterson
+ * Connor Wlodarczak
+ */
+
+/* PostGen Eval
+ *
+ * This is the core of PostGen.
+ *
+ * This file contains the interpreters main eval loop, and all logic for
+ * interpreting and executing user inputted commands and script files.
+ *
+ * All supported commands have their own function that acts as a state.  When a
+ * command is received by the eval loop, it is compared to a list of commands
+ * and then executes the corresponding function from a list of function
+ * pointers. The same is true of a script file as it is parsed.
+ */
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
@@ -10,14 +29,17 @@
 
 // The number of commands in the interpreter
 #define NUM_COMMANDS 17
+
 // Index that the PostScript commands begin at
 #define PS_CMD_START 5
 
 // Private function prototypes:
+
 // Evaluator for user input
 static void eval( FILE* inStream, bool psOnly );
 // Used to parse each command
 static int parseCommand( char* line, int* argc, char* argv[] );
+
 // Functions for each command/state:
 static void path( int argc, char* argv[] );
 static void closedPath( int argc, char* argv[] );
@@ -162,6 +184,13 @@ void eval( FILE* inStream, bool psOnly ) {
             if(psOnly) { start = PS_CMD_START; }
             for( int i = start; i < NUM_COMMANDS && parseErr == 0; i++  ) {
                 if( strcmp( commands[i], argv[0] ) == 0 ) {
+                    // Ensure there is an active session prior to executing
+                    // commands that require it.
+                    if( session == NULL && i >= PS_CMD_START ) {
+                        printf( "\nERROR:\tNo active session!\n" );
+                        return;
+                    }
+
                     // If we are executing a PS command, add this to file
                     if( i >= PS_CMD_START && !psOnly ) {
                         // Save coordinate system state
@@ -987,7 +1016,7 @@ void help( int argc, char* argv[] ) {
         printf( "\nERROR:\tInvalid number of arguments provided!\n" );
         printf( "Usage:\thelp\n" );
     } else {
-        printf( "\ninterPS Manual\n" );
+        printf( "\nPostGen Manual\n" );
         printf( "--------------\n" );
         printf( "This interpreter behaves like a state machine, with each \n"
                 "command mapped to its own state.  The commands given construct \n"

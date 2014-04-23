@@ -1,5 +1,5 @@
 CC= clang
-PROG= ./bin/interPS
+PROG= ./bin/postgen
 CFLAGS= -g -Wall
 OBJS= ./src/main.o ./src/eval.o
 

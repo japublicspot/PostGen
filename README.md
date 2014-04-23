@@ -21,14 +21,14 @@ https://bitbucket.org/ntpeters/postscript-project
 ##Compilation
 Simply execute `make` in the root project directory. (ensure that you have clang installed)
 
-An executable will be created at `./bin/interPS`.
+An executable will be created at `./bin/postgen`.
 
 ##Usage
-Run the interpreter by executing `./interPS`
+Run the interpreter by executing `./postgen`
 
 When executing the intperpreter a filename may also optionally be provided:
 ```
-./interPS script.pscript
+./postgen script.pscript
 ```
 
 When a filename is provided, the interpreter will open and evaluate the contents of that file.
