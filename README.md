@@ -1,8 +1,7 @@
-#PostScript Language Project
-CS4121 - Programming Languages
+#PostGen
 
 ##Description
-This program was created as a project for a Programming Languages class as
+This program was created as a project for a Programming Languages class (CS4121) as
 a way to research and learn about the PostScript language.
 
 This is a basic interpreter that acts as a state machine to generate
