@@ -1,9 +1,3 @@
-/* PostScript Language Project
- * CS4121 - Programming Languages
- * Nathan Peterson
- * Connor Wlodarczak
- */
-
 /* PostGen Eval
  *
  * Provides external commands to the PostGen core.

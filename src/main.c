@@ -1,9 +1,3 @@
-/* PostScript Language Project
- * CS4121 - Programming Languages
- * Nathan Peterson
- * Connor Wlodarczak
- */
-
 /* PostGen
  *
  * PostGen is a basic interpreter that acts as a state machine to handle user

@@ -1,22 +1,12 @@
 #PostScript Language Project
 CS4121 - Programming Languages
 
-## Group
-Nathan Peterson
-
-Connor Wlodarczak
-
 ##Description
 This program was created as a project for a Programming Languages class as
 a way to research and learn about the PostScript language.
 
 This is a basic interpreter that acts as a state machine to generate
 a PostScript file from a series of user-inputted commands.
-
-##Repository
-Repository for this project exists at:
-
-https://bitbucket.org/ntpeters/postscript-project
 
 ##Compilation
 Simply execute `make` in the root project directory. (ensure that you have clang installed)
@@ -115,3 +105,8 @@ Closes any open sessions and exits the interpreter.
 
 ###help
 Displays the help dialog.
+
+##Repository
+Repository for this project exists at:
+
+https://github.com/ntpeters/PostGen
