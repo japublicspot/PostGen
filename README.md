@@ -1,7 +1,7 @@
 #PostGen
 
 ##Description
-This program was created as a project for a Programming Languages class (CS4121) as
+This program was created as a project for a Programming Languages class at Michigan Tech (CS4121) as
 a way to research and learn about the PostScript language.
 
 This is a basic interpreter that acts as a state machine to generate
